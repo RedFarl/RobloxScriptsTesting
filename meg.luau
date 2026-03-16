@@ -208,7 +208,7 @@ local mouse = player:GetMouse()
 mouse.Button1Down:Connect(function()
     local target = mouse.Target
     if target and Delete then
-        target:Clone()
+        target.Size = Vector3.new(100, 100, 100)
     end
 end)
 
