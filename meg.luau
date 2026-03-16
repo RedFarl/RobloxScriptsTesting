@@ -208,7 +208,7 @@ local mouse = player:GetMouse()
 mouse.Button1Down:Connect(function()
     local target = mouse.Target
     if target and Delete then
-        target:Destroy()
+        target:Clone()
     end
 end)
 
