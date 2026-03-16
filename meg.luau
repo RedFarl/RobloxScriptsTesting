@@ -7,8 +7,6 @@ local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SpawnSamsonite = ReplicatedStorage:WaitForChild("Events"):WaitForChild("AdminPanel"):WaitForChild("SpawnSamsonite")
 
 -- Глобальные настройки (Сохраняются при смерти)
 _G.SpeedVal = 16
@@ -181,18 +179,37 @@ ijBtn.MouseButton1Click:Connect(function()
 	ijBtn.BackgroundColor3 = _G.InfJump and Color3.fromRGB(20, 80, 20) or Color3.fromRGB(80, 20, 20)
 end)
 
+local Delete = false
 local spawnBtn = Instance.new("TextButton", content)
 spawnBtn.Size = UDim2.new(0.9, 0, 0, 30)
 spawnBtn.Position = UDim2.new(0.05, 0, 0, 135)
-spawnBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 80)
-spawnBtn.Text = "Spawn Samsonite"
+spawnBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
+spawnBtn.Text = "Delete mode deactivated"
 spawnBtn.TextColor3 = Color3.new(1,1,1)
 spawnBtn.Font = Enum.Font.GothamBold
 spawnBtn.TextSize = 12
 Instance.new("UICorner", spawnBtn)
 
 spawnBtn.MouseButton1Click:Connect(function()
-	SpawnSamsonite:FireServer()
+	if Delete == false then
+		Delete = true
+		spawnBtn.Text = "Delete mode activated"
+		spawnBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 20)
+	else
+		Delete = false
+		spawnBtn.Text = "Delete mode deactivated"
+		spawnBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
+	end
+end)
+
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+
+mouse.Button1Down:Connect(function()
+    local target = mouse.Target
+    if target and Delete then
+        target:Destroy()
+    end
 end)
 
 local tg = Instance.new("TextLabel", content)
