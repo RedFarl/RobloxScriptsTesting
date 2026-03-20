@@ -1,7 +1,3 @@
-for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-	if v.Name == "Athiel's DevMenu" then v:Destroy() end
-end
-
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
