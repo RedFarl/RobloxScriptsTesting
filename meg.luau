@@ -159,18 +159,22 @@ addSlider("Inf Jump Debounce (ms)", 85, 1000, 10, "InfJumpDelay")
 
 --[[
 addSlider("Set Cash Value", 245, 100000, 0, "SetCash")
+]]--
 local SetCash = Instance.new("TextButton", content)
 SetCash.Size = UDim2.new(0.9, 0, 0, 20)
 SetCash.Position = UDim2.new(0.05, 0, 0, 275)
 SetCash.BackgroundColor3 = Color3.fromRGB(18, 221, 7)
-SetCash.Text = "Set Cash"
+SetCash.Text = "AutoClicker"
 SetCash.TextColor3 = Color3.new(1,1,1)
 SetCash.Font = Enum.Font.GothamBold
 SetCash.TextSize = 12
 Instance.new("UICorner", SetCash)
 SetCash.MouseButton1Click:Connect(function()
+	task.spawn(function()
+		local module = require(game.ReplicatedStorage.ClientModules.Click)
+		module.EnableAutoClicker_event()
+	end)
 end)
-]]--
 
 local ijBtn = Instance.new("TextButton", content)
 ijBtn.Size = UDim2.new(0.9, 0, 0, 30)
@@ -202,20 +206,17 @@ Instance.new("UICorner", DeleteBtn)
 DeleteBtn.MouseButton1Click:Connect(function()
 	if Delete == false then
 		Delete = true
-		spawnBtn.Text = "Delete mode activated"
-		spawnBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 20)
+		DeleteBtn.Text = "Delete mode activated"
+		DeleteBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 20)
 	else
 		Delete = false
-		spawnBtn.Text = "Delete mode deactivated"
-		spawnBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
+		DeleteBtn.Text = "Delete mode deactivated"
+		DeleteBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
 	end
 end)
 
 local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
-
-player.CharacterAdded:Wait()
-task.wait(0.5)
 
 local deleted = player.Character:GetChildren()
 local Orig = {}
