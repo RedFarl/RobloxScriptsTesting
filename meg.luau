@@ -172,7 +172,7 @@ Instance.new("UICorner", SetCash)
 SetCash.MouseButton1Click:Connect(function()
 	task.spawn(function()
 		local module = require(game.ReplicatedStorage.ClientModules.Click)
-		module.EnableAutoClicker_event()
+		module.EnableAutoClicker()
 	end)
 end)
 
