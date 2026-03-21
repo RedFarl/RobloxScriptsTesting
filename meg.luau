@@ -172,7 +172,7 @@ Instance.new("UICorner", SetCash)
 SetCash.MouseButton1Click:Connect(function()
 	task.spawn(function()
 		local module = require(game.ReplicatedStorage.ClientModules.Click)
-		module.EnableAutoClicker()
+		module.EnableAutoClicker_event()
 	end)
 end)
 
@@ -204,15 +204,9 @@ DeleteBtn.TextSize = 12
 Instance.new("UICorner", DeleteBtn)
 
 DeleteBtn.MouseButton1Click:Connect(function()
-	if Delete == false then
-		Delete = true
-		DeleteBtn.Text = "Delete mode activated"
-		DeleteBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 20)
-	else
-		Delete = false
-		DeleteBtn.Text = "Delete mode deactivated"
-		DeleteBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-	end
+	Delete = not Delete
+	DeleteBtn.Text = Delete and "Delete mode activated" or "Delete mode deactivated"
+	DeleteBtn.BackgroundColor3 = Delete and Color3.fromRGB(20, 80, 20) or Color3.fromRGB(80, 20, 20)
 end)
 
 local player = game.Players.LocalPlayer
@@ -304,7 +298,7 @@ SetSpeedBtn.MouseButton1Click:Connect(function()
 		SetSpeedBtn.Text = "Auto Set Speed (On)"
 	else
 		SetSpeedBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-		SetSpeedBtn.Text = "Auto Set Jump (Off)"
+		SetSpeedBtn.Text = "Auto Set Speed (Off)"
 	end
 end)
 
