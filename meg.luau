@@ -11,10 +11,11 @@ _G.SetCash = 0
 
 local sg = Instance.new("ScreenGui", player.PlayerGui)
 sg.Name = "Athiel's DevMenu"
+sg.ResetOnSpawn = false
 
 local main = Instance.new("Frame", sg)
 main.Size = UDim2.new(0, 260, 0, 350)
-main.Position = UDim2.new(0.5, -130, 0.5, -100)
+main.Position = UDim2.new(0.1, -130, 0.5, -100)
 main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 main.BorderSizePixel = 1
 main.BorderColor3 = Color3.new(1,1,1)
@@ -227,11 +228,13 @@ mouse.Button1Down:Connect(function()
 	local target = ray.Instance
 	if target then
 		if table.find(deleted, target) and not Delete and target.Parent ~= player.Character then
+			print("return to normal")
 			target.Transparency = Orig[target].Transparency
 			target.CanCollide = Orig[target].CanCollide
 			Orig[target] = nil
 			table.remove(deleted, table.find(deleted, target))
 		elseif Delete and not table.find(deleted, target) and target.Parent ~= player.Character then
+			print("hide")
 			Orig[target] = {Transparency = target.Transparency, CanCollide = target.CanCollide}
 			target.Transparency = 0.8
 			target.CanCollide = false
