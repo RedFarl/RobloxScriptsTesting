@@ -181,7 +181,7 @@ local function run()
 				"RRThrottle"
 			}
 			for thr = 1, #Throttles, 1 do
-				local Throttle = Controller:FindFirstChild(thr)
+				local Throttle = Controller:FindFirstChild(Throttles[thr])
 				Throttle.MotorMaxAcceleration = 10 * _G.SetCash
 				Throttle.MotorMaxTorque = 10000 * _G.SetCash
 			end
