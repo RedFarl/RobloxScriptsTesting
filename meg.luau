@@ -158,7 +158,7 @@ addSlider("Speed", 5, 300, 16, "SpeedVal")
 addSlider("Jump", 45, 500, 50, "JumpVal")
 addSlider("Inf Jump Debounce (ms)", 85, 1000, 10, "InfJumpDelay")
 
-addSlider("Motor Power Multiplier", 245, 10, 1, "SetCash")
+addSlider("Velocity Power", 245, 100, 1, "SetCash")
 local SetCash = Instance.new("TextButton", content)
 SetCash.Size = UDim2.new(0.9, 0, 0, 20)
 SetCash.Position = UDim2.new(0.05, 0, 0, 275)
@@ -174,17 +174,11 @@ local function run()
 	repeat
 		task.spawn(function()
 			local Controller = game.Workspace.Track.Loiper2:FindFirstChild("VehicleSeat")
-			local Throttles = {
-				"LRThrottle",
-				"LFThrottle",
-				"RFThrottle",
-				"RRThrottle"
-			}
-			for thr = 1, #Throttles, 1 do
-				local Throttle = Controller:FindFirstChild(Throttles[thr])
-				Throttle.MotorMaxAcceleration = 10 * _G.SetCash
-				Throttle.MotorMaxTorque = 10000 * _G.SetCash
-			end
+			print("Before  ".. Controller.AssemblyLinearVelocity)
+			local camera = workspace.CurrentCamera
+			local lookDirection = camera.CFrame.LookVector
+			Controller.AssemblyLinearVelocity = lookDirection * _G.SetCash
+			print("After  ".. Controller.AssemblyLinearVelocity)
 		end)
 		task.wait(0.2)
 	until RUNLOOP == false
