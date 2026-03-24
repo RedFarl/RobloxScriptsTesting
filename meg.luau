@@ -186,6 +186,7 @@ local function run()
 				Throttle.MotorMaxTorque = 10000 * _G.SetCash
 			end
 		end)
+		task.wait(0.2)
 	until RUNLOOP == false
 end
 
