@@ -158,23 +158,42 @@ addSlider("Speed", 5, 300, 16, "SpeedVal")
 addSlider("Jump", 45, 500, 50, "JumpVal")
 addSlider("Inf Jump Debounce (ms)", 85, 1000, 10, "InfJumpDelay")
 
---[[
-addSlider("Set Cash Value", 245, 100000, 0, "SetCash")
-]]--
+addSlider("Motor Power Multiplier", 245, 10, 1, "SetCash")
 local SetCash = Instance.new("TextButton", content)
 SetCash.Size = UDim2.new(0.9, 0, 0, 20)
 SetCash.Position = UDim2.new(0.05, 0, 0, 275)
 SetCash.BackgroundColor3 = Color3.fromRGB(18, 221, 7)
-SetCash.Text = "AutoClicker"
+SetCash.Text = "Start / End Loop"
 SetCash.TextColor3 = Color3.new(1,1,1)
 SetCash.Font = Enum.Font.GothamBold
 SetCash.TextSize = 12
 Instance.new("UICorner", SetCash)
+
+local RUNLOOP = false
+local function run()
+	repeat
+		task.spawn(function()
+			local Controller = game.Workspace.Track.Loiper2:FindFirstChild("VehicleSeat")
+			local Throttles = {
+				"LRThrottle",
+				"LFThrottle",
+				"RFThrottle",
+				"RRThrottle"
+			}
+			for thr = 1, #Throttles, 1 do
+				local Throttle = Controller:FindFirstChild(thr)
+				Throttle.MotorMaxAcceleration = 10 * _G.SetCash
+				Throttle.MotorMaxTorque = 10000 * _G.SetCash
+			end
+		end)
+	until RUNLOOP == false
+end
+
 SetCash.MouseButton1Click:Connect(function()
-	task.spawn(function()
-		local module = require(game.ReplicatedStorage.ClientModules.Click)
-		module.EnableAutoClicker_event()
-	end)
+	RUNLOOP = not RUNLOOP
+	if RUNLOOP then
+		run()
+	end
 end)
 
 local ijBtn = Instance.new("TextButton", content)
