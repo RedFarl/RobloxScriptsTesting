@@ -99,7 +99,7 @@ local function addSlider(name, y, max, default, globalVar)
 	local tweenInfo = TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
 	local tween = TweenService:Create(gradient, tweenInfo, {Offset = Vector2.new(-1, 0)})
 	tween:Play()
-	
+
 	local dot = Instance.new("Frame", fill)
 	dot.Size = UDim2.new(0, 7, 0, 7)
 	dot.Position = UDim2.new(1, -3.5, 0.5, -3.5)
@@ -117,7 +117,7 @@ local function addSlider(name, y, max, default, globalVar)
 			end
 		end
 	end)
-	
+
 	local function update(input)
 		local mousePos = input.Position.X
 		local barPos = sliderBg.AbsolutePosition.X
@@ -130,7 +130,7 @@ local function addSlider(name, y, max, default, globalVar)
 		elseif globalVar == "SpeedVal" and val > 299 then
 			val = 3000
 		end
-		
+
 		lab.Text = name..": "..val
 		_G[globalVar] = val
 	end
@@ -207,6 +207,39 @@ ijBtn.MouseButton1Click:Connect(function()
 	ijBtn.BackgroundColor3 = _G.InfJump and Color3.fromRGB(20, 80, 20) or Color3.fromRGB(80, 20, 20)
 end)
 
+function fling()
+	local h = game.Players.LocalPlayer.Character.Humanoid
+	if h:GetState() == Enum.HumanoidStateType.Physics then
+		h:ChangeState(Enum.HumanoidStateType.GettingUp)
+	else
+		h:ChangeState(Enum.HumanoidStateType.Physics)
+	end
+	--[[
+	local jump = Instance.new("Part")
+	jump.Name = "JumpPart"
+	jump.Anchored = true
+	jump.Parent = workspace
+	jump.Size = Vector3.new(20, 50, 20)
+	jump.Position = game.Players.LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, -28, 0)
+	jump.Transparency = 0
+	jump.AssemblyLinearVelocity = Vector3.new(0, -1000, 0)
+	task.wait(2)
+	jump:Destroy()
+	]]--
+end
+
+local FlingBtn = Instance.new("TextButton", content)
+FlingBtn.Size = UDim2.new(0.2, 0, 0, 30)
+FlingBtn.Position = UDim2.new(0, 0, 0, 205)
+FlingBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 255)
+FlingBtn.Text = "Fling"
+FlingBtn.TextColor3 = Color3.new(1,1,1)
+FlingBtn.Font = Enum.Font.GothamBold
+FlingBtn.TextSize = 12
+Instance.new("UICorner", FlingBtn)
+
+FlingBtn.MouseButton1Click:Connect(fling)
+
 local Delete = false
 local DeleteBtn = Instance.new("TextButton", content)
 DeleteBtn.Size = UDim2.new(0.9, 0, 0, 30)
@@ -234,11 +267,11 @@ mouse.Button1Down:Connect(function()
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
 	rayParams.FilterDescendantsInstances = deleted
-	
+
 	if not Delete then rayParams.FilterType = Enum.RaycastFilterType.Include end
 	local ray = workspace:Raycast(workspace.CurrentCamera.CFrame.Position, mouse.Hit.LookVector * 100, rayParams)
 	if not ray then return end
-	
+
 	local target = ray.Instance
 	if target then
 		if table.find(deleted, target) and not Delete and target.Parent ~= player.Character then
@@ -258,8 +291,8 @@ mouse.Button1Down:Connect(function()
 end)
 
 local SitBtn = Instance.new("TextButton", content)
-SitBtn.Size = UDim2.new(0.3, 0, 0, 30)
-SitBtn.Position = UDim2.new(0.05, 0, 0, 205)
+SitBtn.Size = UDim2.new(0.2, 0, 0, 30)
+SitBtn.Position = UDim2.new(0.2, 0, 0, 205)
 SitBtn.BackgroundColor3 = Color3.fromRGB(40, 8, 147)
 SitBtn.Text = "Sit"
 SitBtn.TextColor3 = Color3.new(1,1,1)
@@ -322,7 +355,8 @@ end)
 local tg = Instance.new("TextLabel", content)
 tg.Size = UDim2.new(1, 0, 0, 20)
 tg.Position = UDim2.new(0, 0, 0, 285)
-tg.Text = "These Are NOT Hacks"
+--tg.Text = "These Are NOT Hacks"
+tg.Text = ""
 tg.Font = Enum.Font.GothamBold
 tg.BackgroundTransparency = 1
 tg.TextSize = 25
