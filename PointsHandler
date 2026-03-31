@@ -1,0 +1,162 @@
+local Points = {}
+
+local function getParts(player)
+	local list = {}
+	for i,v in pairs(game.Workspace:GetDescendants()) do
+		if v:IsA("BasePart") then
+			if not (v.CanCollide == false or v.Transparency == 1) then
+				table.insert(list, v)
+			end
+		end
+	end
+	
+	for _, v in pairs(player.Character:GetDescendants()) do
+		if v:IsA("BasePart") then
+			table.insert(list, v)
+		end
+	end
+	
+	return list
+end
+
+local Data = {}
+
+local function isOtherPlayerPart(player, part)
+	for _, plr in pairs(game.Players:GetPlayers()) do
+		if plr ~= player and plr.Character then
+			if part:IsDescendantOf(plr.Character) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+local Faces = {
+	Enum.NormalId.Top,
+	Enum.NormalId.Bottom,
+	Enum.NormalId.Left,
+	Enum.NormalId.Right,
+	Enum.NormalId.Front,
+	Enum.NormalId.Back
+}
+
+local function Point(v, player)
+	local size = v.Size
+	local cf = v.CFrame
+
+	for _, face in ipairs(Faces) do
+		local corners = {}
+
+		if face == Enum.NormalId.Top or face == Enum.NormalId.Bottom then
+			local y = (face == Enum.NormalId.Top) and size.Y/2 or -size.Y/2
+
+			table.insert(corners, Vector3.new( size.X/2, y,  size.Z/2))
+			table.insert(corners, Vector3.new(-size.X/2, y,  size.Z/2))
+			table.insert(corners, Vector3.new(-size.X/2, y, -size.Z/2))
+			table.insert(corners, Vector3.new( size.X/2, y, -size.Z/2))
+
+		elseif face == Enum.NormalId.Left or face == Enum.NormalId.Right then
+			local x = (face == Enum.NormalId.Right) and size.X/2 or -size.X/2
+
+			table.insert(corners, Vector3.new(x,  size.Y/2,  size.Z/2))
+			table.insert(corners, Vector3.new(x, -size.Y/2,  size.Z/2))
+			table.insert(corners, Vector3.new(x, -size.Y/2, -size.Z/2))
+			table.insert(corners, Vector3.new(x,  size.Y/2, -size.Z/2))
+
+		elseif face == Enum.NormalId.Front or face == Enum.NormalId.Back then
+			local z = (face == Enum.NormalId.Back) and size.Z/2 or -size.Z/2
+
+			table.insert(corners, Vector3.new( size.X/2,  size.Y/2, z))
+			table.insert(corners, Vector3.new(-size.X/2,  size.Y/2, z))
+			table.insert(corners, Vector3.new(-size.X/2, -size.Y/2, z))
+			table.insert(corners, Vector3.new( size.X/2, -size.Y/2, z))
+		end
+
+		local worldCorners = {}
+		for _, corner in ipairs(corners) do
+			table.insert(worldCorners, cf:PointToWorldSpace(corner))
+		end
+
+		local offset
+
+		if face == Enum.NormalId.Top then
+			offset = Vector3.new(0, size.Y/2, 0)
+		elseif face == Enum.NormalId.Bottom then
+			offset = Vector3.new(0, -size.Y/2, 0)
+		elseif face == Enum.NormalId.Left then
+			offset = Vector3.new(-size.X/2, 0, 0)
+		elseif face == Enum.NormalId.Right then
+			offset = Vector3.new(size.X/2, 0, 0)
+		elseif face == Enum.NormalId.Front then
+			offset = Vector3.new(0, 0, -size.Z/2)
+		elseif face == Enum.NormalId.Back then
+			offset = Vector3.new(0, 0, size.Z/2)
+		end
+
+		local center = cf:PointToWorldSpace(offset) -- face center
+		local normal = cf:VectorToWorldSpace(Vector3.FromNormalId(face))
+
+		local dist = (center - player.Character.HumanoidRootPart.Position).Magnitude
+		local c = v.Color
+		local darkenMultiplier = 100/(dist+100)
+		c = Color3.new(c.R * darkenMultiplier, c.G * darkenMultiplier, c.B * darkenMultiplier)
+
+		return {
+			Part = v,
+			Face = face,
+			Corners = worldCorners,
+			Center = center,
+			Normal = normal,
+			Color = c,
+			Transparency = v.Transparency
+		}
+	end
+end
+
+local movingParts = {}
+
+function Points.GenerateStaticPoints(player, camera)
+	local Data = {}
+	local list = getParts(player)
+
+	for _, v in pairs(list) do
+		if v:IsA("BasePart") then
+			if v.CanCollide and v.Transparency < 1 and not table.find(movingParts, v) then
+				table.insert(Data, Point(v, player))
+			end
+		end
+	end
+
+	return Data
+end
+
+function Points.SetMovingParts(list)
+	movingParts = list
+	return true
+end
+
+function Points.GetMovingParts()
+	return movingParts
+end
+
+function Points.GenerateMovingPoints(player)
+	local Data = {}
+	local list = movingParts
+
+	for _, v in pairs(list) do
+		if v:IsA("BasePart") then
+			if v.CanCollide and v.Transparency < 1 then
+				table.insert(Data, Point(v, player))
+			end
+		end
+	end
+
+	return Data
+end
+
+function Points.GetData()
+	return Data
+end
+
+return Points
