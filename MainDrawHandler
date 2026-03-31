@@ -1,0 +1,238 @@
+task.wait(3)
+print("Welcome...")
+
+local frame = script.Parent.Frame
+local backframe = script.Parent.Behind
+for i = 1, 100 do
+	task.wait(0.01)
+	frame.BackgroundTransparency -= 0.01
+	backframe.BackgroundTransparency = frame.BackgroundTransparency
+end
+
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local vps = camera.ViewportSize
+repeat
+	vps = camera.ViewportSize
+	task.wait()
+until vps.X > 0 and vps.Y > 0
+
+local canvasWidth = math.min(math.max(10, math.floor(vps.X / 2)), 1024)
+local canvasHeight = math.min(math.max(10, math.floor(vps.Y / 2)), 1024)
+
+local module = require(script.PointsHandler)
+local data = module.GetData()
+
+local CanvasDraw = require(script.Parent.CanvasDraw)
+local Canvas = CanvasDraw.new(script.Parent.Frame, Vector2.new(canvasWidth, canvasHeight))
+local cs = Canvas.Resolution
+Canvas:Clear()
+
+local function getDepth(pd, camera)
+	local farthest = math.huge
+
+	for _, p in ipairs(pd.Corners) do
+		local z = camera.CFrame:PointToObjectSpace(p).Z
+		farthest = math.min(farthest, z)
+	end
+
+	return farthest
+end
+
+local NEAR = 0.1
+
+local function clipAgainstNearPlane(worldPoints, camera)
+	local camCF = camera.CFrame
+	local output = {}
+
+	local function camZ(p)
+		return camCF:PointToObjectSpace(p).Z
+	end
+
+	local function intersect(a, b)
+		local aZ = camZ(a)
+		local bZ = camZ(b)
+
+		local t = (-NEAR - aZ) / (bZ - aZ)
+		return a:Lerp(b, t)
+	end
+
+	local prev = worldPoints[#worldPoints]
+	local prevIn = camZ(prev) <= -NEAR
+
+	for _, curr in ipairs(worldPoints) do
+		local currIn = camZ(curr) <= -NEAR
+
+		if currIn then
+			if not prevIn then
+				table.insert(output, intersect(prev, curr))
+			end
+			table.insert(output, curr)
+		elseif prevIn then
+			table.insert(output, intersect(prev, curr))
+		end
+
+		prev = curr
+		prevIn = currIn
+	end
+
+	return output
+end
+
+local function clipPolygon(points, minX, minY, maxX, maxY)
+	local function clipEdge(points, inside, intersect)
+		local output = {}
+		local prev = points[#points]
+
+		for _, curr in ipairs(points) do
+			local currInside = inside(curr)
+			local prevInside = inside(prev)
+
+			if currInside then
+				if not prevInside then
+					table.insert(output, intersect(prev, curr))
+				end
+				table.insert(output, curr)
+			elseif prevInside then
+				table.insert(output, intersect(prev, curr))
+			end
+
+			prev = curr
+		end
+
+		return output
+	end
+	-- LEFT
+	points = clipEdge(points,
+		function(p) return p.X >= minX end,
+		function(a, b)
+			local t = (minX - a.X) / (b.X - a.X)
+			return Vector2.new(minX, a.Y + (b.Y - a.Y) * t)
+		end
+	)
+	-- RIGHT
+	points = clipEdge(points,
+		function(p) return p.X <= maxX end,
+		function(a, b)
+			local t = (maxX - a.X) / (b.X - a.X)
+			return Vector2.new(maxX, a.Y + (b.Y - a.Y) * t)
+		end
+	)
+	-- TOP
+	points = clipEdge(points,
+		function(p) return p.Y >= minY end,
+		function(a, b)
+			local t = (minY - a.Y) / (b.Y - a.Y)
+			return Vector2.new(a.X + (b.X - a.X) * t, minY)
+		end
+	)
+	-- BOTTOM
+	points = clipEdge(points,
+		function(p) return p.Y <= maxY end,
+		function(a, b)
+			local t = (maxY - a.Y) / (b.Y - a.Y)
+			return Vector2.new(a.X + (b.X - a.X) * t, maxY)
+		end
+	)
+	return points
+end
+
+local points = table.create(8)
+
+function thing(pd)
+	if pd.Normal:Dot((camera.CFrame.Position - pd.Center).Unit) <= 0 then
+		return
+	end
+
+	local worldPoints = clipAgainstNearPlane(pd.Corners, camera)
+	if #worldPoints < 3 then
+		return
+	end
+
+	table.clear(points)
+
+	for _, worldPoint in ipairs(worldPoints) do
+		local screenPos = camera:WorldToViewportPoint(worldPoint)
+
+		-- after near-plane clipping, this should be safe
+		if screenPos.Z <= 0 then
+			return
+		end
+
+		local x = screenPos.X * cs.X / vps.X
+		local y = screenPos.Y * cs.Y / vps.Y
+		points[#points + 1] = Vector2.new(x, y)
+	end
+
+	points = clipPolygon(points, 0, 0, cs.X - 1, cs.Y - 1)
+	if #points < 3 then
+		return
+	end
+
+	for i = 2, #points - 1 do
+		Canvas:DrawTriangle(points[1], points[i], points[i + 1], pd.Color, 1)
+	end
+end
+
+local function depthSort(t)
+	local c = t
+	for _, pd in ipairs(c) do
+		pd._depth = getDepth(pd, camera)
+	end
+
+	table.sort(c, function(a, b)
+		return a._depth < b._depth
+	end)
+	return c
+end
+
+local function getMovingParts()
+	local list = {}
+	for _, v in pairs(game.Workspace:GetDescendants()) do
+		if v:IsA("BasePart") then
+			if v:IsDescendantOf(player.Character) then
+				table.insert(list, v)
+			end
+		end
+	end
+	return list
+end
+
+local function combineLists(list1, list2)
+	local combined = table.create(#list1 + #list2)
+	
+	table.move(list1, 1, #list1, 1, combined)
+	table.move(list2, 1, #list2, #list1 + 1, combined)
+	return combined
+end
+
+-- Main Loop
+module.SetMovingParts(getMovingParts())
+local staticData = module.GenerateStaticPoints(player, camera)
+local movingData = module.GenerateMovingPoints(player)
+
+local data = {}
+local previous = time()
+local depth = time()
+
+while task.wait() do
+	Canvas:Clear()
+	
+	if time() > (depth + 1) then
+		depth = time()
+		module.SetMovingParts(getMovingParts())
+		staticData = module.GenerateStaticPoints(player, camera)
+	end
+	
+	if time() > (previous + 0.1) then
+		previous = time()
+		movingData = module.GenerateMovingPoints(player)
+		data = combineLists(staticData, movingData)
+		
+		data = depthSort(data)
+	end
+
+	for _, pd in ipairs(data) do
+		thing(pd)
+	end
+end
