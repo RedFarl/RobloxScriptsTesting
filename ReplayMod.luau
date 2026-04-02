@@ -296,7 +296,7 @@ local function playReplay()
 			end
 
 			if ghostModel and ghostModel.Parent then
-				ghostModel:PivotTo(a.root:Lerp(b.root, alpha))
+				ghostModel.PrimaryPart.CFrame = (a.root:Lerp(b.root, alpha))
 				if ghostMotors and a.joints then
 					applyJointsInterpolated(ghostMotors, a.joints, b.joints, alpha)
 				end
