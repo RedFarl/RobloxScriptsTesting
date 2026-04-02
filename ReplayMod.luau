@@ -274,7 +274,9 @@ local function playReplay()
 	local duration = frames[#frames].t
 	local index = 1
 	local startTime = os.clock()
-
+	
+	local pivotToRoot = character:GetPivot():ToObjectSpace(player.Character.PrimaryPart.CFrame)
+	
 	while playing and playToken == myToken do
 		local elapsed = (os.clock() - startTime) * playbackSpeed
 
@@ -288,7 +290,7 @@ local function playReplay()
 
 		local a = frames[index]
 		local b = frames[math.min(index + 1, #frames)]
-
+		
 		if a and b and a.root and b.root then
 			local alpha = 0
 			if b.t > a.t then
@@ -296,7 +298,8 @@ local function playReplay()
 			end
 
 			if ghostModel and ghostModel.Parent then
-				ghostModel.PrimaryPart.CFrame = (a.root:Lerp(b.root, alpha))
+				--ghostModel:PivotTo(a.root * pivotToRoot:Inverse())
+				ghostModel.PrimaryPart.CFrame = ((a.root * pivotToRoot:Inverse()):Lerp(b.root, alpha))
 				if ghostMotors and a.joints then
 					applyJointsInterpolated(ghostMotors, a.joints, b.joints, alpha)
 				end
@@ -380,7 +383,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -70, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Replay Menu v1.1"
+title.Text = "Replay Menu v1.2"
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 14
