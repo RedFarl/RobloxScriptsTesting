@@ -1,4 +1,5 @@
-local player = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -136,12 +137,17 @@ end
 
 local function InsertInstanceIntoPage(inst)
   if inst and inst.Name and inst.Position and inst.Size then
-    local new = pages[LoadedPage]
+    local new = getPageContentParent(LoadedPage)
     inst.Parent = new
   end
 end
 
 local connection1, connection2 = nil, nil
+
+sg.Destroying:Connect(function()
+	if connection1 then connection1:Disconnect() connection1 = nil end
+  	if connection2 then connection2:Disconnect() connection2 = nil end
+end)
 
 local function SwapPage(NewPage)
   local p1 = getPageContentParent(LoadedPage)
