@@ -290,6 +290,7 @@ ResetVelocityBtn.TextSize = 12
 Instance.new("UICorner", ResetVelocityBtn)
 
 ResetVelocityBtn.MouseButton1Click:Connect(function()
+	task.wait(0.2)
 	Selecting = not Selecting
 	ResetVelocityBtn.BackgroundColor3 = Selecting and Color3.fromRGB(210, 200, 255) or Color3.fromRGB(139, 132, 255)
 end)
@@ -304,9 +305,21 @@ end)
 local function onInputBegan(input, gameProcessed)
 	if gameProcessed then return end
 	
-	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and Selecting then
+	if Selecting then
+		local mouseInputTypes = {
+			Enum.UserInputType.MouseButton1,
+			Enum.UserInputType.MouseButton2,
+			Enum.UserInputType.MouseButton3
+		}
+		if table.find(mouseInputTypes, input.UserInputType) then
+			task.wait(1)
+			if Selecting == false then
+				return
+			end
+		end
 		Keybind = input.KeyCode
 		ResetVelocityBtn.Text = Keybind
+		
 		Selecting = false
 		ResetVelocityBtn.BackgroundColor3 = Color3.fromRGB(139, 132, 255)
 	end
