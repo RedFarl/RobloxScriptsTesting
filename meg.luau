@@ -9,8 +9,14 @@ _G.InfJump = false
 _G.InfJumpDelay = 0.1
 _G.SetCash = 0
 
+for _, child in ipairs(player.PlayerGui:GetChildren()) do
+	if string.find(child.Name, "Athiel's DevMenu") then
+		child:Destroy()
+	end
+end
+
 local sg = Instance.new("ScreenGui", player.PlayerGui)
-sg.Name = "Athiel's DevMenu v2"
+sg.Name = "Athiel's DevMenu v2.1"
 sg.ResetOnSpawn = false
 
 local main = Instance.new("Frame", sg)
@@ -32,7 +38,7 @@ header.BorderSizePixel = 0
 local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(0.7, 0, 1, 0)
 title.Position = UDim2.new(0.05, 0, 0, 0)
-title.Text = "Athiel's DevMenu"
+title.Text = "Athiel's DevMenu v2.1"
 title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -426,7 +432,10 @@ end)
 minBtn.MouseButton1Click:Connect(function()
 	main:TweenSize(main.Size.Y.Offset == 30 and UDim2.new(0, 260, 0, 350) or UDim2.new(0, 260, 0, 30), "Out", "Quad", 0.2, true)
 end)
-clsBtn.MouseButton1Click:Connect(function() sg:Destroy() end)
+clsBtn.MouseButton1Click:Connect(function()
+	script:Destroy()
+	sg:Destroy()
+end)
 
 RS.RenderStepped:Connect(function()
 	local h = tick() % 5 / 5
