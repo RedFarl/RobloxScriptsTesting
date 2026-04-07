@@ -241,8 +241,9 @@ Instance.new("UICorner", FlingBtn)
 FlingBtn.MouseButton1Click:Connect(fling)
 
 local Delete = false
+local Deltype = 1
 local DeleteBtn = Instance.new("TextButton", content)
-DeleteBtn.Size = UDim2.new(0.9, 0, 0, 30)
+DeleteBtn.Size = UDim2.new(0.7, 0, 0, 30)
 DeleteBtn.Position = UDim2.new(0.05, 0, 0, 165)
 DeleteBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
 DeleteBtn.Text = "Delete mode deactivated"
@@ -252,13 +253,56 @@ DeleteBtn.TextSize = 12
 Instance.new("UICorner", DeleteBtn)
 
 DeleteBtn.MouseButton1Click:Connect(function()
-	Delete = not Delete
-	DeleteBtn.Text = Delete and "Delete mode activated" or "Delete mode deactivated"
-	DeleteBtn.BackgroundColor3 = Delete and Color3.fromRGB(20, 80, 20) or Color3.fromRGB(80, 20, 20)
+	if Delete and Deltype == 2 then
+		DeleteBtn.Text = "Delete mode Max"
+		Deltype = 3
+	else
+		Delete = not Delete
+		if Deltype == 3 then
+			Deltype = 1
+		else
+			Deltype += 1
+		end
+		DeleteBtn.Text = Delete and "Delete mode activated" or "Delete mode deactivated"
+		DeleteBtn.BackgroundColor3 = Delete and Color3.fromRGB(20, 80, 20) or Color3.fromRGB(80, 20, 20)
+	end
 end)
 
 local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
+
+local Keybind = Enum.KeyCode.F
+local Selecting = false
+local ResetVelocityBtn = Instance.new("TextButton", content)
+ResetVelocityBtn.Size = UDim2.new(0.15, 0, 0, 30)
+ResetVelocityBtn.Position = UDim2.new(0.8, 0, 0, 165)
+ResetVelocityBtn.BackgroundColor3 = Color3.fromRGB(139, 132, 255)
+ResetVelocityBtn.Text = "KEYBIND"
+ResetVelocityBtn.TextColor3 = Color3.new(1,1,1)
+ResetVelocityBtn.Font = Enum.Font.GothamBold
+ResetVelocityBtn.TextSize = 12
+Instance.new("UICorner", ResetVelocityBtn)
+
+ResetVelocityBtn.MouseButton1Click:Connect(function()
+	Selecting = not Selecting
+	ResetVelocityBtn.BackgroundColor3 = Selecting and Color3.fromRGB(175, 170, 255) or Color3.fromRGB(139, 132, 255)
+end)
+
+local UserInputService = game:GetService("UserInputService")
+local function onInputBegan(input, gameProcessed)
+	if gameProcessed then return end
+	
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and Selecting then
+		Keybind = input.KeyCode
+	end
+	if Selecting == false and input.KeyCode == Keybind then
+		local character = player.Character or player.CharacterAdded:Wait()
+		local rootPart = character:WaitForChild("HumanoidRootPart")
+		rootPart.AssemblyLinearVelocity = Vector3.zero
+		rootPart.AssemblyAngularVelocity = Vector3.zero
+	end
+end
+UserInputService.InputBegan:Connect(onInputBegan)
 
 local deleted = player.Character:GetChildren()
 local Orig = {}
@@ -283,9 +327,13 @@ mouse.Button1Down:Connect(function()
 		elseif Delete and not table.find(deleted, target) and target.Parent ~= player.Character then
 			print("hide")
 			Orig[target] = {Transparency = target.Transparency, CanCollide = target.CanCollide}
-			target.Transparency = 0.8
-			target.CanCollide = false
-			table.insert(deleted, target)
+			if Deltype == 3 then
+				target:Destroy()
+			else
+				target.Transparency = 0.8
+				target.CanCollide = false
+				table.insert(deleted, target)
+			end
 		end
 	end
 end)
