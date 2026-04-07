@@ -10,7 +10,7 @@ _G.InfJumpDelay = 0.1
 _G.SetCash = 0
 
 local sg = Instance.new("ScreenGui", player.PlayerGui)
-sg.Name = "Athiel's DevMenu"
+sg.Name = "Athiel's DevMenu v2"
 sg.ResetOnSpawn = false
 
 local main = Instance.new("Frame", sg)
@@ -294,6 +294,7 @@ local function onInputBegan(input, gameProcessed)
 	
 	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and Selecting then
 		Keybind = input.KeyCode
+		ResetVelocityBtn.Text = Keybind
 	end
 	if Selecting == false and input.KeyCode == Keybind then
 		local character = player.Character or player.CharacterAdded:Wait()
