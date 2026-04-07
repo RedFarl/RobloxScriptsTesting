@@ -291,25 +291,36 @@ Instance.new("UICorner", ResetVelocityBtn)
 
 ResetVelocityBtn.MouseButton1Click:Connect(function()
 	Selecting = not Selecting
-	ResetVelocityBtn.BackgroundColor3 = Selecting and Color3.fromRGB(175, 170, 255) or Color3.fromRGB(139, 132, 255)
+	ResetVelocityBtn.BackgroundColor3 = Selecting and Color3.fromRGB(210, 200, 255) or Color3.fromRGB(139, 132, 255)
 end)
 
-local UserInputService = game:GetService("UserInputService")
+local HoldingKeybind = false
+UIS.InputEnded:Connect(function(input)
+	if Selecting == false and input.KeyCode == Keybind then
+		HoldingKeybind = false
+	end
+end)
+
 local function onInputBegan(input, gameProcessed)
 	if gameProcessed then return end
 	
 	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and Selecting then
 		Keybind = input.KeyCode
 		ResetVelocityBtn.Text = Keybind
+		Selecting = false
+		ResetVelocityBtn.BackgroundColor3 = Color3.fromRGB(139, 132, 255)
 	end
 	if Selecting == false and input.KeyCode == Keybind then
-		local character = player.Character or player.CharacterAdded:Wait()
-		local rootPart = character:WaitForChild("HumanoidRootPart")
-		rootPart.AssemblyLinearVelocity = Vector3.zero
-		rootPart.AssemblyAngularVelocity = Vector3.zero
+		HoldingKeybind = true
+		while HoldingKeybind do
+			local character = player.Character or player.CharacterAdded:Wait()
+			local rootPart = character:WaitForChild("HumanoidRootPart")
+			rootPart.AssemblyLinearVelocity = Vector3.zero
+			rootPart.AssemblyAngularVelocity = Vector3.zero
+		end
 	end
 end
-UserInputService.InputBegan:Connect(onInputBegan)
+UIS.InputBegan:Connect(onInputBegan)
 
 local deleted = player.Character:GetChildren()
 local Orig = {}
