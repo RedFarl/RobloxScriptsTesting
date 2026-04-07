@@ -16,7 +16,7 @@ for _, child in ipairs(player.PlayerGui:GetChildren()) do
 end
 
 local sg = Instance.new("ScreenGui", player.PlayerGui)
-sg.Name = "Athiel's DevMenu v2.1"
+sg.Name = "Athiel's DevMenu v2.2"  -- UPDATE HERE                                  <<-- UPDATE VERSION NAME HERE
 sg.ResetOnSpawn = false
 
 local main = Instance.new("Frame", sg)
@@ -38,7 +38,7 @@ header.BorderSizePixel = 0
 local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(0.7, 0, 1, 0)
 title.Position = UDim2.new(0.05, 0, 0, 0)
-title.Text = "Athiel's DevMenu v2.1"
+title.Text = "Athiel's DevMenu v2.2" -- UPDATE HERE                                  <<-- UPDATE TITLE TEXT HERE
 title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -312,7 +312,7 @@ local function onInputBegan(input, gameProcessed)
 	end
 	if Selecting == false and input.KeyCode == Keybind then
 		HoldingKeybind = true
-		while HoldingKeybind do
+		while HoldingKeybind and task.wait(0.01) do
 			local character = player.Character or player.CharacterAdded:Wait()
 			local rootPart = character:WaitForChild("HumanoidRootPart")
 			rootPart.AssemblyLinearVelocity = Vector3.zero
