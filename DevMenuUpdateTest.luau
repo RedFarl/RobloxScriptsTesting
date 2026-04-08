@@ -132,6 +132,15 @@ local function newContent(page)
 	leftBtn.BackgroundTransparency = 1
 	leftBtn:SetAttribute("inList", true)
 	
+	local PageSplit = Instance.new("Frame", content)
+	PageSplit.Name = "left"
+	PageSplit.Size = UDim2.new(scaled / 4, 0, 0, 30)
+	PageSplit.Position = UDim2.new((paddingXscale * 2) + (scaled/2), 0, 0, paddingYoffset)
+	PageSplit.Text = "<"
+	PageSplit.TextColor3 = Color3.new(1,1,1)
+	PageSplit.BackgroundTransparency = 1
+	PageSplit:SetAttribute("inList", true)
+	
 	return content
 end
 
@@ -222,24 +231,27 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page, 
 	print(pos)
 	local content = getPageContentParent(page)
 	local sliderId = name
-	local lab = Instance.new("TextLabel", content)
+	
+	local holder = Instance.new("Frame", content)
+	holder.Name = sliderId
+	holder.Size = UDim2.new(size.X.Scale, 0, 0, size.Y.Offset)
+	holder.Position = pos
+	Instance.new("UICorner", holder).CornerRadius = UDim.new(0, 0.3)
+	
+	local lab = Instance.new("TextLabel", holder)
 	lab.Name = sliderId
-	lab.Size = UDim2.new(size.X.Scale, 0, 0, size.Y.Offset/2) -- 1, 0, 0, 15
-
-	lab.Position = pos
+	lab.Size = UDim2.new(0.8, 0, 0, holder.Size.Y.Offset/2.5)
+	lab.Position = UDim2.new(0.1, 0, 0, holder.Size.Y.Offset/7.5)
 	lab.Text = name..": "..default
 	lab.TextColor3 = color or Color3.new(1,1,1)
 	lab.TextSize = 11
 	lab.Font = Enum.Font.GothamMedium
 	lab.BackgroundTransparency = 1
 
-	local sliderBg = Instance.new("TextButton", content)
+	local sliderBg = Instance.new("TextButton", holder)
 	sliderBg.Name = sliderId
-	sliderBg.Size = UDim2.new(size.X.Scale*0.9, 0, 0, 4*(size.Y.Offset/15))
-	
-	local val = newLine and 1 or 0
-	
-	sliderBg.Position = UDim2.new(pos.X.Scale, 0, 0, pos.Y.Offset + 20*(size.Y.Offset/15)*val)
+	sliderBg.Size = UDim2.new(0.9, 0, 0, holder.Size.Y.Offset/9.35)
+	sliderBg.Position = UDim2.new(0.05, 0, 0, holder.Size.Y.Offset/1.75)
 	sliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 	sliderBg.Text = ""
 	sliderBg.AutoButtonColor = false
@@ -269,11 +281,11 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page, 
 	local tween = TweenService:Create(gradient, tweenInfo, {Offset = Vector2.new(1, 0)})
 	tween:Play()
 
-	local multi = math.min(size.X.Scale*0.9, size.Y.Offset/15)
+	local val = fill.AbsoluteSize.Y
 
 	local dot = Instance.new("Frame", fill)
-	dot.Size = UDim2.new(0, 7*multi, 0, 7*multi)
-	dot.Position = UDim2.new(1, -3.5*multi, 0.5, -3.5*multi)
+	dot.Size = UDim2.new(0, val*1.5, 1.5, 0)
+	dot.Position = UDim2.new(1, -val * 0.75, 0.5, -val * 0.75)
 	dot.BackgroundColor3 = Color3.new(1,1,1)
 	local dotCorner = Instance.new("UICorner", dot)
 	dotCorner.CornerRadius = UDim.new(1, 0)
@@ -324,7 +336,7 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page, 
 			if draggingSlider == sliderId then draggingSlider = nil main.Draggable = true end
 		end
 	end)
-	return lab, sliderBg
+	return holder
 end
 
 local function AddItem(inst, page, ItemSize, ItemType, NewLine, Color, Text, TextColor, Max, default, globalVar)
@@ -379,22 +391,30 @@ local function AddItem(inst, page, ItemSize, ItemType, NewLine, Color, Text, Tex
 	if ItemType == "TextButton" or ItemType == "TextLabel" then
 		inst.Size = startSize
 		inst.Position = startPos
-		inst.BackgroundColor3 = Color
+		if Color then inst.BackgroundColor3 = Color end
 		inst.Text = Text
 		if ItemType == "TextLabel" and not TextColor then
 			table.insert(rainbowText, inst)
 		else
 			inst.TextColor3 = TextColor
 		end
+		InsertInstanceIntoPage(inst)
 	elseif ItemType == "Slider" then
 		-- force proper height
 		--startSize = UDim2.new(startSize.X.Scale, 0, 0, SLIDER_HEIGHT)
-
 		local r1, r2 = addSlider(Text, startPos, startSize, Max, default, globalVar, TextColor, page, NewLine)
 		if r1 and r2 then
 			print(r1.Position)
 			InsertInstanceIntoPage(r1)
 		end
+	elseif ItemType == "Frame" then
+	  startSize = UDim2.new(startSize.X.Offset, 0, 0, math.max(IconSizeY/5, 5))
+	  inst.Size = startSize
+		inst.Position = startPos
+		if Color then inst.BackgroundColor3 = Color end
+		local UIC = Instance.new("UICorner", inst)
+		UIC.CornerRadius = UDim.new(0, 1)
+		InsertInstanceIntoPage(inst)
 	end
 end
 
@@ -428,7 +448,7 @@ AddItem(nil, 1, 1, "Slider", true, nil, "Speed", nil, 300, 16, "SpeedVal")
 AddItem(nil, 1, 1, "Slider", true, nil, "Jump", nil, 300, 16, "JumpVal")
 AddItem(nil, 1, 2, "Slider", true, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
 AddItem(nil, 1, 1, "Slider", false, nil, "Velocity Power", nil, 300, 16, "TrackFly")
-task.wait(100)
+task.wait(1000)
 
 -- CREATE BUTTONS AND TEXT -----------------------------------------------------------------------------------------------------------
 local TrackFly = Instance.new("TextButton", content)
