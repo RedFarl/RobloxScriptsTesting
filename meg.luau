@@ -51,12 +51,13 @@ main.BorderColor3 = Color3.new(1,1,1)
 main.Active = true
 main.Draggable = true
 main.ClipsDescendants = true
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 5)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
 
 local header = Instance.new("Frame", main)
 header.Size = UDim2.new(1, 0, 0, 30)
 header.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 header.BorderSizePixel = 0
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 10)
 
 local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(0.7, 0, 1, 0)
@@ -185,9 +186,9 @@ local function getPageContentParent(page)
 	return pages[page]
 end
 
-local function InsertInstanceIntoPage(inst)
+local function InsertInstanceIntoPage(inst, page)
 	if inst and inst.Name and inst.Position and inst.Size then
-		local new = getPageContentParent(LoadedPage)
+		local new = getPageContentParent(page)
 		inst.Parent = new
 		inst:SetAttribute("inList", true)
 	end
@@ -213,7 +214,7 @@ end
 local function GetMainSize(page)
 	local lowest = getLowestItemInPage(page)
 	if not lowest then return UDim2.new(0, 260, 0, 350) end
-	local Ysize = lowest.Position.Y.Offset + lowest.Size.Y.Offset + paddingYoffset
+	local Ysize = lowest.Position.Y.Offset + lowest.Size.Y.Offset + IconSizeY + paddingYoffset
 	return UDim2.new(0, 260, 0, Ysize)
 end
 
@@ -295,21 +296,14 @@ local function SwapPage(NewPage)
 	for _, inst in ipairs(main:GetChildren()) do
 		if inst.Name == "Content" then
 			local CP = inst:GetAttribute("Page")
-			if CP > math.min(NewPage, LoadedPage) and CP < math.max(NewPage, LoadedPage) then
-				local endPos = UDim2.new(NewPage - LoadedPage, 0, 0, 30)
+			local targetPos = UDim2.new(CP - NewPage, 0, 0, 30)
 
-				local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-				local tween = TweenService:Create(inst, tweenInfo, {Position = endPos})
-				task.spawn(function() tween:Play() end)
-			else
-				inst.Position = UDim2.new(NewPage - LoadedPage, 0, 0, 30)
-			end
+			local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+			TweenService:Create(inst, tweenInfo, { Position = targetPos }):Play()
 		end
 	end
 
-	local newMainSize = GetMainSize(NewPage)
-	main:TweenSize(newMainSize, "Out", "Quad", 0.2, true)
-
+	main:TweenSize(GetMainSize(NewPage), "Out", "Quad", 0.2, true)
 	LoadedPage = NewPage
 end
 SwapPage(1)
@@ -325,6 +319,7 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page, 
 	holder.Name = sliderId
 	holder.Size = UDim2.new(size.X.Scale, 0, 0, size.Y.Offset)
 	holder.Position = pos
+	holder.BackgroundTransparency = 1
 	Instance.new("UICorner", holder).CornerRadius = UDim.new(0, 0.3)
 
 	local lab = Instance.new("TextLabel", holder)
@@ -488,13 +483,13 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tra
 			inst.TextColor3 = TextColor or Color3.new(1, 1, 1)
 		end
 		Instance.new("UICorner", inst)
-		InsertInstanceIntoPage(inst)
+		InsertInstanceIntoPage(inst, page)
 	elseif ItemType == "Slider" then
 		-- force proper height
 		--startSize = UDim2.new(startSize.X.Scale, 0, 0, SLIDER_HEIGHT)
 		local r1 = addSlider(Text, startPos, startSize, Max, default, globalVar, TextColor, page, NewLine)
 		if r1 then
-			InsertInstanceIntoPage(r1)
+			InsertInstanceIntoPage(r1, page)
 			AddToAllInstances(r1, name, page)
 		end
 	elseif ItemType == "Frame" then
@@ -509,7 +504,7 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tra
 		end
 		local UIC = Instance.new("UICorner", inst)
 		UIC.CornerRadius = UDim.new(0, 1)
-		InsertInstanceIntoPage(inst)
+		InsertInstanceIntoPage(inst, page)
 	end
 	if ItemType == "TextButton" or ItemType == "Frame" or ItemType == "TextLabel" then
 		AddToAllInstances(inst, name, page)
@@ -532,7 +527,8 @@ clsBtn.TextColor3 = Color3.new(1, 0, 0)
 clsBtn.BackgroundTransparency = 1
 
 minBtn.MouseButton1Click:Connect(function()
-	main:TweenSize(main.Size.Y.Offset == 30 and UDim2.new(0, 260, 0, 350) or UDim2.new(0, 260, 0, 30), "Out", "Quad", 0.2, true)
+	print(GetMainSize(LoadedPage))
+	main:TweenSize(main.Size.Y.Offset == 30 and UDim2.new(0, 260, 0, GetMainSize(LoadedPage).Y.Offset) or UDim2.new(0, 260, 0, 30), "Out", "Quad", 0.2, true)
 end)
 
 clsBtn.MouseButton1Click:Connect(function()
