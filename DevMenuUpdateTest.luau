@@ -1,3 +1,5 @@
+task.wait(2)
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local UIS = game:GetService("UserInputService")
@@ -61,199 +63,169 @@ title.TextXAlignment = Enum.TextXAlignment.Left
 
 -- MAIN HANDLING FUNCTIONS -----------------------------------------------------------------------------------------------------------
 local function SortPages()
-  local sortedKeys = {}
-  for id in pairs(pageTitles) do
-    table.insert(sortedKeys, id)
-  end
-  
-  table.sort(sortedKeys, function(id1, id2)
-    return id1 < id2
-  end)
-  
-  return sortedKeys
+	local sortedKeys = {}
+	for id in pairs(pageTitles) do
+		table.insert(sortedKeys, id)
+	end
+
+	table.sort(sortedKeys, function(id1, id2)
+		return id1 < id2
+	end)
+
+	return sortedKeys
 end
 
 local function getNeighboringPage(currentId, change)
-  local sortedKeys = SortPages()
-  
-  local currentIndex = table.find(sortedKeys, currentId)
-  if not currentIndex then return nil end
-  
-  local newIndex = currentIndex + change
-  local total = #sortedKeys
-  while newIndex > total do
-    newIndex = newIndex - total
-  end
-  while newIndex < 1 do
-    newIndex = newIndex + total
-  end
-  
-  return sortedKeys[newIndex]
+	local sortedKeys = SortPages()
+
+	local currentIndex = table.find(sortedKeys, currentId)
+	if not currentIndex then return nil end
+
+	local newIndex = currentIndex + change
+	local total = #sortedKeys
+	while newIndex > total do
+		newIndex = newIndex - total
+	end
+	while newIndex < 1 do
+		newIndex = newIndex + total
+	end
+
+	return sortedKeys[newIndex]
 end
 
 local function newContent(page)
-  local content = Instance.new("Frame", main)
-  content.Name = "Content"
-  content.Size = UDim2.new(1, 0, 1, -30)
-  content.Position = UDim2.new(page - LoadedPage, 0, 0, 30)
-  content.BackgroundTransparency = 1
-  content:SetAttribute("Page", page)
-  pageTitles[page] = "Unnamed"
-  
-  local scaled = (1 - (4*paddingXscale))
-  local pageTitle = Instance.new("TextLabel", content)
-  pageTitle.Size = UDim2.new(scaled / 2, 0, 0, 30)
-  pageTitle.Position = UDim2.new(paddingXscale, 0, 0, paddingYoffset)
-  pageTitle.Text = ("Page " .. page .. " - " .. pageTitles[page])
-  pageTitle.TextColor3 = Color3.new(1,1,1)
-  pageTitle.Font = Enum.Font.GothamBold
-  pageTitle.TextScaled = true
-  pageTitle.BackgroundTransparency = 1
-  pageTitle.TextXAlignment = Enum.TextXAlignment.Left
-  
-  local rightBtn = Instance.new("TextButton", content)
-  rightBtn.Name = "right"
-  rightBtn.Size = UDim2.new(scaled / 4, 0, 0, 30)
-  rightBtn.Position = UDim2.new((paddingXscale * 2) + (scaled/4*3), 0, 0, paddingYoffset)
-  rightBtn.Text = ">"
-  rightBtn.TextColor3 = Color3.new(1,1,1)
-  rightBtn.BackgroundTransparency = 1
-  
-  local leftBtn = Instance.new("TextButton", content)
-  leftBtn.Name = "left"
-  leftBtn.Size = UDim2.new(scaled / 4, 0, 0, 30)
-  leftBtn.Position = UDim2.new((paddingXscale * 2) + (scaled/2), 0, 0, paddingYoffset)
-  leftBtn.Text = "<"
-  leftBtn.TextColor3 = Color3.new(1,1,1)
-  leftBtn.BackgroundTransparency = 1
+	local content = Instance.new("Frame", main)
+	content.Name = "Content"
+	content.Size = UDim2.new(1, 0, 1, -30)
+	content.Position = UDim2.new(page - LoadedPage, 0, 0, 30)
+	content.BackgroundTransparency = 1
+	content:SetAttribute("Page", page)
+	pageTitles[page] = "Unnamed"
+
+	local scaled = (1 - (4*paddingXscale))
+	local pageTitle = Instance.new("TextLabel", content)
+	pageTitle.Size = UDim2.new(scaled / 2, 0, 0, 30)
+	pageTitle.Position = UDim2.new(paddingXscale, 0, 0, paddingYoffset)
+	pageTitle.Text = ("Page " .. page .. " - " .. pageTitles[page])
+	pageTitle.TextColor3 = Color3.new(1,1,1)
+	pageTitle.Font = Enum.Font.GothamBold
+	pageTitle.TextScaled = true
+	pageTitle.BackgroundTransparency = 1
+	pageTitle.TextXAlignment = Enum.TextXAlignment.Left
+	pageTitle:SetAttribute("inList", true)
+
+	local rightBtn = Instance.new("TextButton", content)
+	rightBtn.Name = "right"
+	rightBtn.Size = UDim2.new(scaled / 4, 0, 0, 30)
+	rightBtn.Position = UDim2.new((paddingXscale * 2) + (scaled/4*3), 0, 0, paddingYoffset)
+	rightBtn.Text = ">"
+	rightBtn.TextColor3 = Color3.new(1,1,1)
+	rightBtn.BackgroundTransparency = 1
+	rightBtn:SetAttribute("inList", true)
+
+	local leftBtn = Instance.new("TextButton", content)
+	leftBtn.Name = "left"
+	leftBtn.Size = UDim2.new(scaled / 4, 0, 0, 30)
+	leftBtn.Position = UDim2.new((paddingXscale * 2) + (scaled/2), 0, 0, paddingYoffset)
+	leftBtn.Text = "<"
+	leftBtn.TextColor3 = Color3.new(1,1,1)
+	leftBtn.BackgroundTransparency = 1
+	leftBtn:SetAttribute("inList", true)
+	
+	return content
 end
 
 local function getPageContentParent(page)
-  if pages[page] == nil then
-    pages[page] = newContent(page)
-	print("NEW PAGE CREATED")
-	print(pages[page])
-  end
-  return pages[page]
+	if pages[page] == nil then
+		pages[page] = newContent(page)
+		print("NEW PAGE CREATED")
+		print(pages[page])
+	end
+	return pages[page]
 end
 
 local function InsertInstanceIntoPage(inst)
-  if inst and inst.Name and inst.Position and inst.Size then
-    local new = getPageContentParent(LoadedPage)
-    inst.Parent = new
-  end
+	if inst and inst.Name and inst.Position and inst.Size then
+		local new = getPageContentParent(LoadedPage)
+		inst.Parent = new
+		inst:SetAttribute("inList", true)
+	end
+end
+
+local function getLowestItemInPage(page)
+	local lowest = nil
+	for _, inst in ipairs(main:GetChildren()) do
+		if inst.Name == "Content" then
+			local CP = inst:GetAttribute("Page")
+			if CP == page then
+				for _, i in ipairs(inst:GetChildren()) do
+					if (lowest == nil or i.Position.Y.Offset > lowest.Position.Y.Offset) and i:GetAttribute("inList") then
+						lowest = i
+					end
+				end
+			end
+		end
+	end
+	return lowest
 end
 
 local connection1, connection2 = nil, nil
 
 sg.Destroying:Connect(function()
 	if connection1 then connection1:Disconnect() connection1 = nil end
-  	if connection2 then connection2:Disconnect() connection2 = nil end
+	if connection2 then connection2:Disconnect() connection2 = nil end
 end)
 
 local function SwapPage(NewPage)
-  local p1 = getPageContentParent(LoadedPage)
-  local p2 = getPageContentParent(NewPage)
-  
-  if connection1 then connection1:Disconnect() connection1 = nil end
-  if connection2 then connection2:Disconnect() connection2 = nil end
+	local p1 = getPageContentParent(LoadedPage)
+	local p2 = getPageContentParent(NewPage)
 
-  print("P2 VALUE: ")
-  print(p2)
-  connection1 = p2:FindFirstChild("right")
-  if connection1 then connection1 = connection1.MouseButton1Click:Connect(SwapPage(getNeighboringPage(page, 1))) end
-  connection2 = p2:FindFirstChild("left")
-  if connection2 then connection2 = connection2.MouseButton1Click:Connect(SwapPage(getNeighboringPage(page, -1))) end
-  
-  for _, inst in ipairs(main:GetChildren()) do
-    if inst.Name == "Content" then
-      local CP = inst:GetAttribute("Page")
-      if CP > math.min(NewPage, LoadedPage) and CP < math.max(NewPage, LoadedPage) then
-        local endPos = UDim2.new(page - LoadedPage, 0, 0, 30)
-        
-        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-        local tween = TweenService:Create(inst, tweenInfo, {Position = endPos})
-        task.spawn(function() tween:Play() end)
-      else
-        content.Position = UDim2.new(page - LoadedPage, 0, 0, 30)
-      end
-    end
-  end
-  LoadedPage = NewPage
+	if connection1 then connection1:Disconnect() connection1 = nil end
+	if connection2 then connection2:Disconnect() connection2 = nil end
+
+	connection1 = p2:FindFirstChild("right")
+	if connection1 then
+		connection1 = connection1.MouseButton1Click:Connect(function()
+			SwapPage(getNeighboringPage(NewPage, 1))
+		end)
+	end
+	connection2 = p2:FindFirstChild("left")
+	if connection2 then
+		connection2 = connection2.MouseButton1Click:Connect(function()
+			SwapPage(getNeighboringPage(NewPage, -1))
+		end)
+	end
+
+	for _, inst in ipairs(main:GetChildren()) do
+		if inst.Name == "Content" then
+			local CP = inst:GetAttribute("Page")
+			if CP > math.min(NewPage, LoadedPage) and CP < math.max(NewPage, LoadedPage) then
+				local endPos = UDim2.new(NewPage - LoadedPage, 0, 0, 30)
+
+				local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+				local tween = TweenService:Create(inst, tweenInfo, {Position = endPos})
+				task.spawn(function() tween:Play() end)
+			else
+				inst.Position = UDim2.new(NewPage - LoadedPage, 0, 0, 30)
+			end
+		end
+	end
+	LoadedPage = NewPage
 end
 SwapPage(1)
 
 -- INSERT AND CREATE ITEMS / SLIDERS -----------------------------------------------------------------------------------------------------------
-local function AddItem(inst, page, ItemSize, ItemType, NewLine, Color, Text, TextColor, Max, default, globalVar)
-  -- inst refers to the Instance        -->  SET TO FALSE WITH SLIDER
-  -- page refers to which page the item will be held on
-  -- ItemSize is 1: Max stretch, 2: Half stretch, 3: Quarter stretch
-  -- ItemType is "Slider" or the Instance name BEFORE renaming it (instance type)
-  -- NewLine is a bool, whether you write the item on a new line or on the current line of content
-  -- Color is Color3.new() defines the background color
-  -- Text is the text displayed, title of slider or button or label
-  -- TextColor is the color of the text displayed (Text)
-  
-  -- SLIDER ONLY
-  -- Max is SLIDER ONLY, sets the max value of the slider
-  -- default is SLIDER ONLY, sets the default starting value on the slider
-  -- globalVar is SLIDER ONLY, slider sets the globar variable named after that to it's value
-  local content = getPageContentParent(page)
-  local items = pages(page)
-  
-  local Ystart = 0
-  local Xstart = 0
-  if NewLine then
-    Xstart = paddingXscale
-    Ystart = items[#items].Position.Y.Offset + paddingYoffset + items[#items].Size.Y.Offset
-  else
-    Xstart = items[#items].Position.X.Scale + items[#items].Size.X.Scale + paddingXscale
-    Ystart = items[#items].Position.Y.Offset
-  end
-  local startPos = UDim2.new(Xstart, 0, 0, Ystart)
-  
-  local startSize = UDim2.new(0, 0, 0, 0)
-  if ItemSize == 1 then
-    startSize = UDim2.new(1 - startPos.X.Scale - paddingXscale, 0, 0, IconSizeY)
-    if startSize.X.Scale < 0.2 then
-      Xstart = paddingXscale
-      startPos = UDim2.new(Xstart, 0, 0, Ystart)
-      startSize = UDim2.new(1 - startPos.X.Scale - paddingXscale, 0, 0, IconSizeY)
-    end
-  elseif ItemSize == 2 then
-    local tempVal = 1 - (startPos.X.Scale + (3 * paddingXscale))
-    startSize = UDim2.new(tempVal/2, 0, 0, IconSizeY)
-  elseif ItemSize == 3 then
-    local tempVal = 1 - (startPos.X.Scale + (5 * paddingXscale))
-    startSize = UDim2.new(tempVal/4, 0, 0, IconSizeY)
-  end
-  if ItemType == "TextButton" or ItemType == "TextLabel" then
-    inst.Size = startSize
-    inst.Position = startPos
-    inst.BackgroundColor3 = Color
-    inst.Text = Text
-    if ItemType == "TextLabel" and not TextColor then
-      table.insert(rainbowText, inst)
-    else
-      inst.TextColor3 = TextColor
-    end
-  elseif ItemType == "Slider" then
-    local r1, r2 = addSlider(Text, startPos, startSize, Max, default, globalVar, TextColor, page)
-    if r1 and r2 then
-      InsertInstanceIntoPage(r1)
-      InsertInstanceIntoPage(r2)
-    end
-  end
-end
-
 local draggingSlider = nil
 
-local function addSlider(name, pos, size, max, default, globalVar, color, page)
-  local content = getPageContentParent(page)
+local function addSlider(name, pos, size, max, default, globalVar, color, page, newLine)
+	print("STEP 1")
+	print(pos)
+	local content = getPageContentParent(page)
 	local sliderId = name
 	local lab = Instance.new("TextLabel", content)
 	lab.Name = sliderId
 	lab.Size = UDim2.new(size.X.Scale, 0, 0, size.Y.Offset/2) -- 1, 0, 0, 15
+
 	lab.Position = pos
 	lab.Text = name..": "..default
 	lab.TextColor3 = color or Color3.new(1,1,1)
@@ -264,7 +236,10 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page)
 	local sliderBg = Instance.new("TextButton", content)
 	sliderBg.Name = sliderId
 	sliderBg.Size = UDim2.new(size.X.Scale*0.9, 0, 0, 4*(size.Y.Offset/15))
-	sliderBg.Position = UDim2.new(pos.X.Scale, 0, 0, pos.Y.Offset + 20*(size.Y.Offset/15))
+	
+	local val = newLine and 1 or 0
+	
+	sliderBg.Position = UDim2.new(pos.X.Scale, 0, 0, pos.Y.Offset + 20*(size.Y.Offset/15)*val)
 	sliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 	sliderBg.Text = ""
 	sliderBg.AutoButtonColor = false
@@ -276,26 +251,26 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page)
 	fill.BorderSizePixel = 0
 	local fillCorner = Instance.new("UICorner", fill)
 	fillCorner.CornerRadius = UDim.new(0, 1)
-  
+
 	local gradient = Instance.new("UIGradient", fill)
 	gradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-    ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 255, 0)),
-    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
-    ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
-    ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-  })
-  
-  gradient.Offset = Vector2.new(-1, 0)
-  
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+		ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 255, 0)),
+		ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+		ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)),
+		ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+	})
+
+	gradient.Offset = Vector2.new(-1, 0)
+
 	local tweenInfo = TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1)
-  local tween = TweenService:Create(gradient, tweenInfo, {Offset = Vector2.new(1, 0)})
-  tween:Play()
-  
-  local multi = math.min(size.X.Scale*0.9, size.Y.Offset/15)
-  
+	local tween = TweenService:Create(gradient, tweenInfo, {Offset = Vector2.new(1, 0)})
+	tween:Play()
+
+	local multi = math.min(size.X.Scale*0.9, size.Y.Offset/15)
+
 	local dot = Instance.new("Frame", fill)
 	dot.Size = UDim2.new(0, 7*multi, 0, 7*multi)
 	dot.Position = UDim2.new(1, -3.5*multi, 0.5, -3.5*multi)
@@ -315,7 +290,7 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page)
 	end)
 
 	local function update(input)
-	  if not sg then return end
+		if not sg then return end
 		local mousePos = input.Position.X
 		local barPos = sliderBg.AbsolutePosition.X
 		local barSize = sliderBg.AbsoluteSize.X
@@ -352,6 +327,77 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page)
 	return lab, sliderBg
 end
 
+local function AddItem(inst, page, ItemSize, ItemType, NewLine, Color, Text, TextColor, Max, default, globalVar)
+	-- inst refers to the Instance        -->  SET TO FALSE WITH SLIDER
+	-- page refers to which page the item will be held on
+	-- ItemSize is 1: Max stretch, 2: Half stretch, 3: Quarter stretch
+	-- ItemType is "Slider" or the Instance name BEFORE renaming it (instance type)
+	-- NewLine is a bool, whether you write the item on a new line or on the current line of content
+	-- Color is Color3.new() defines the background color
+	-- Text is the text displayed, title of slider or button or label
+	-- TextColor is the color of the text displayed (Text)
+
+	-- SLIDER ONLY
+	-- Max is SLIDER ONLY, sets the max value of the slider
+	-- default is SLIDER ONLY, sets the default starting value on the slider
+	-- globalVar is SLIDER ONLY, slider sets the globar variable named after that to it's value
+	local content = getPageContentParent(page)
+	local items = pages[page]
+	local ti = getLowestItemInPage(page) or {Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(0, 0, 0, 0)}
+	local SLIDER_HEIGHT = IconSizeY
+	
+	print(ti)
+	print(ti.Position)
+
+	local Ystart = 0
+	local Xstart = 0
+	if NewLine then
+		Xstart = paddingXscale
+		Ystart = ti.Position.Y.Offset + paddingYoffset + ti.Size.Y.Offset
+	else
+		Xstart = ti.Position.X.Scale + ti.Size.X.Scale + paddingXscale
+		Ystart = ti.Position.Y.Offset
+		
+	end
+	local startPos = UDim2.new(Xstart, 0, 0, Ystart)
+
+	local startSize = UDim2.new(0, 0, 0, 0)
+	if ItemSize == 1 then
+		startSize = UDim2.new(1 - startPos.X.Scale - paddingXscale, 0, 0, IconSizeY)
+		if startSize.X.Scale < 0.2 then
+			Xstart = paddingXscale
+			startPos = UDim2.new(Xstart, 0, 0, Ystart)
+			startSize = UDim2.new(1 - startPos.X.Scale - paddingXscale, 0, 0, IconSizeY)
+		end
+	elseif ItemSize == 2 then
+		local tempVal = 1 - (startPos.X.Scale + (3 * paddingXscale))
+		startSize = UDim2.new(tempVal/2, 0, 0, IconSizeY)
+	elseif ItemSize == 3 then
+		local tempVal = 1 - (startPos.X.Scale + (5 * paddingXscale))
+		startSize = UDim2.new(tempVal/4, 0, 0, IconSizeY)
+	end
+	if ItemType == "TextButton" or ItemType == "TextLabel" then
+		inst.Size = startSize
+		inst.Position = startPos
+		inst.BackgroundColor3 = Color
+		inst.Text = Text
+		if ItemType == "TextLabel" and not TextColor then
+			table.insert(rainbowText, inst)
+		else
+			inst.TextColor3 = TextColor
+		end
+	elseif ItemType == "Slider" then
+		-- force proper height
+		--startSize = UDim2.new(startSize.X.Scale, 0, 0, SLIDER_HEIGHT)
+
+		local r1, r2 = addSlider(Text, startPos, startSize, Max, default, globalVar, TextColor, page, NewLine)
+		if r1 and r2 then
+			print(r1.Position)
+			InsertInstanceIntoPage(r1)
+		end
+	end
+end
+
 -- SETUP HEADER CONTENANTS -----------------------------------------------------------------------------------------------------------
 local minBtn = Instance.new("TextButton", header)
 minBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -367,11 +413,22 @@ clsBtn.Text = "×"
 clsBtn.TextColor3 = Color3.new(1, 0, 0)
 clsBtn.BackgroundTransparency = 1
 
+minBtn.MouseButton1Click:Connect(function()
+	main:TweenSize(main.Size.Y.Offset == 30 and UDim2.new(0, 260, 0, 350) or UDim2.new(0, 260, 0, 30), "Out", "Quad", 0.2, true)
+end)
+
+clsBtn.MouseButton1Click:Connect(function()
+	script:Destroy()
+	sg:Destroy()
+end)
+
 -- CREATE SLIDERS -----------------------------------------------------------------------------------------------------------
-addSlider("Speed", 5, 300, 16, "SpeedVal")
-addSlider("Jump", 45, 500, 50, "JumpVal")
-addSlider("Inf Jump Debounce (ms)", 85, 1000, 10, "InfJumpDelay")
-addSlider("Velocity Power", 245, 100, 1, "TrackFly")
+
+AddItem(nil, 1, 1, "Slider", true, nil, "Speed", nil, 300, 16, "SpeedVal")
+AddItem(nil, 1, 1, "Slider", true, nil, "Jump", nil, 300, 16, "JumpVal")
+AddItem(nil, 1, 2, "Slider", true, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
+AddItem(nil, 1, 1, "Slider", false, nil, "Velocity Power", nil, 300, 16, "TrackFly")
+task.wait(100)
 
 -- CREATE BUTTONS AND TEXT -----------------------------------------------------------------------------------------------------------
 local TrackFly = Instance.new("TextButton", content)
@@ -513,7 +570,7 @@ end)
 
 local function onInputBegan(input, gameProcessed)
 	if gameProcessed then return end
-	
+
 	if Selecting then
 		local mouseInputTypes = {
 			Enum.UserInputType.MouseButton1,
@@ -528,7 +585,7 @@ local function onInputBegan(input, gameProcessed)
 		end
 		Keybind = input.KeyCode
 		ResetVelocityBtn.Text = Keybind
-		
+
 		Selecting = false
 		ResetVelocityBtn.BackgroundColor3 = Color3.fromRGB(139, 132, 255)
 	end
@@ -664,21 +721,13 @@ task.spawn(function()
 	end
 end)
 
-minBtn.MouseButton1Click:Connect(function()
-	main:TweenSize(main.Size.Y.Offset == 30 and UDim2.new(0, 260, 0, 350) or UDim2.new(0, 260, 0, 30), "Out", "Quad", 0.2, true)
-end)
-clsBtn.MouseButton1Click:Connect(function()
-	script:Destroy()
-	sg:Destroy()
-end)
-
 table.insert(rainbowText, title)
 table.insert(rainbowText, tg)
 
 RS.RenderStepped:Connect(function()
 	local h = tick() % 5 / 5
 	for _, inst in ipairs(rainbowText) do
-	  inst.TextColor3 = Color3.fromHSV(h, 1, 1)
+		inst.TextColor3 = Color3.fromHSV(h, 1, 1)
 	end
 end)
 
