@@ -2,6 +2,7 @@ task.wait(2)
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+local mouse = player:GetMouse() or player:GetMouse():Wait()
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -11,6 +12,8 @@ local VersionName = "3.0"
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
+_G.ASspeed = true
+_G.ASjump = true
 _G.InfJump = false
 _G.InfJumpDelay = 0.1
 _G.TrackFly = 0
@@ -561,24 +564,16 @@ local function LoadAllInstances()
   AddItem(Instance.new("TextButton"), 1, "DeleteBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Delete Mode Deactivated", nil, nil, nil, nil)
   
   -- SECOND PAGE
-  -- TRACK FLY
+  -- TRACK FLY (SPEED, TOGGLE)
   AddItem(nil, 2, "VelocityPowerSlider", 1, "Slider", true, nil, nil, "Velocity Power", nil, 300, 16, "TrackFly")
-  AddItem(Instance.new("TextButton"), 1, "TrackFlyBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Track Fly OFF", nil, nil, nil, nil)
+  AddItem(Instance.new("TextButton"), 2, "TrackFlyBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Track Fly OFF", nil, nil, nil, nil)
 end
 
 LoadAllInstances()
 print("Finished Loading Instances!")
 
+
 -- INSTANCE BASED CODE -----------------------------------------------------------------------------------------------------------
-
--- AutoSetSpeedBtn
--- AutoSetJumpBtn
--- FlingBtn
--- SitBtn
--- ResetVelocityBtn
--- DeleteBtn
--- TrackFlyBtn
-
 local function InfJump(inst)
   inst.MouseButton1Click:Connect(function()
 	  _G.InfJump = (inst.Text == "Inf Jump OFF")
@@ -609,10 +604,10 @@ local function InfJump(inst)
 end
 
 local function AutoSetJump(inst)
-  local AutoSetJump = true
+  _G.ASjump = true
   inst.MouseButton1Click:Connect(function()
-  	AutoSetJump = not AutoSetJump
-  	if AutoSetJump and inst then
+  	_G.ASjump = not _G.ASjump
+  	if _G.ASjump and inst then
   		inst.BackgroundColor3 = Color3.new(0, 0.8, 0)
   		inst.Text = "AutoSet Jump ON"
   	else
@@ -623,10 +618,10 @@ local function AutoSetJump(inst)
 end
 
 local function AutoSetSpeed(inst)
-  local AutoSetSpeed = true
+  _G.ASspeed = true
   inst.MouseButton1Click:Connect(function()
-  	AutoSetSpeed = not AutoSetSpeed
-  	if AutoSetSpeed and inst then
+  	_G.ASspeed = not _G.ASspeed
+  	if _G.ASspeed and inst then
   		inst.BackgroundColor3 = Color3.new(0, 0.8, 0)
   		inst.Text = "AutoSet Speed ON"
   	else
@@ -636,229 +631,184 @@ local function AutoSetSpeed(inst)
   end)
 end
 
--- OLD CODE TO REPLACE -----------------------------------------------------------------------------------------------------------
-task.wait(1000)
-local TrackFly = Instance.new("TextButton", content)
-TrackFly.Size = UDim2.new(0.9, 0, 0, 20)
-TrackFly.Position = UDim2.new(0.05, 0, 0, 275)
-TrackFly.BackgroundColor3 = Color3.fromRGB(18, 221, 7)
-TrackFly.Text = "Start / End Loop"
-TrackFly.TextColor3 = Color3.new(1,1,1)
-TrackFly.Font = Enum.Font.GothamBold
-TrackFly.TextSize = 12
-Instance.new("UICorner", TrackFly)
-
-local RUNLOOP = false
-local function run()
-	repeat
-		task.spawn(function()
-			local Controller = game.Workspace.Track.Loiper2:FindFirstChild("VehicleSeat")
-			print("Before  ".. Controller.AssemblyLinearVelocity)
-			local camera = workspace.CurrentCamera
-			local lookDirection = camera.CFrame.LookVector
-			Controller.AssemblyLinearVelocity = lookDirection * _G.TrackFly
-			print("After  ".. Controller.AssemblyLinearVelocity)
-		end)
-		task.wait(0.2)
-	until RUNLOOP == false
+local function Sit(inst)
+  inst.MouseButton1Click:Connect(function()
+  	if player.Character and player.Character:FindFirstChild("Humanoid") then
+  		player.Character.Humanoid.Sit = not player.Character.Humanoid.Sit
+  	end
+  end)
 end
 
-TrackFly.MouseButton1Click:Connect(function()
-	RUNLOOP = not RUNLOOP
-	if RUNLOOP then
-		run()
-	end
-end)
-
-function fling()
-	local h = game.Players.LocalPlayer.Character.Humanoid
-	if h:GetState() == Enum.HumanoidStateType.Physics then
-		h:ChangeState(Enum.HumanoidStateType.GettingUp)
-	else
-		h:ChangeState(Enum.HumanoidStateType.Physics)
-	end
-	--[[
-	local jump = Instance.new("Part")
-	jump.Name = "JumpPart"
-	jump.Anchored = true
-	jump.Parent = workspace
-	jump.Size = Vector3.new(20, 50, 20)
-	jump.Position = game.Players.LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, -28, 0)
-	jump.Transparency = 0
-	jump.AssemblyLinearVelocity = Vector3.new(0, -1000, 0)
-	task.wait(2)
-	jump:Destroy()
-	]]--
+local function Fling(inst)
+  function f()
+  	local h = game.Players.LocalPlayer.Character.Humanoid -- REPLACE WITH PROPER FLING (only with states rn, should be done similar to OC upside down jump pad)
+  	if h:GetState() == Enum.HumanoidStateType.Physics then
+  		h:ChangeState(Enum.HumanoidStateType.GettingUp)
+  	else
+  		h:ChangeState(Enum.HumanoidStateType.Physics)
+  	end
+  	--[[
+  	local jump = Instance.new("Part")
+  	jump.Name = "JumpPart"
+  	jump.Anchored = true
+  	jump.Parent = workspace
+  	jump.Size = Vector3.new(20, 50, 20)
+  	jump.Position = game.Players.LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, -28, 0)
+  	jump.Transparency = 0
+  	jump.AssemblyLinearVelocity = Vector3.new(0, -1000, 0)
+  	task.wait(2)
+  	jump:Destroy()
+  	]]--
+  end
+  inst.MouseButton1Click:Connect(f)
 end
 
-local FlingBtn = Instance.new("TextButton", content)
-FlingBtn.Size = UDim2.new(0.2, 0, 0, 30)
-FlingBtn.Position = UDim2.new(0, 0, 0, 205)
-FlingBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 255)
-FlingBtn.Text = "Fling"
-FlingBtn.TextColor3 = Color3.new(1,1,1)
-FlingBtn.Font = Enum.Font.GothamBold
-FlingBtn.TextSize = 12
-Instance.new("UICorner", FlingBtn)
-
-FlingBtn.MouseButton1Click:Connect(fling)
-
-local Delete = false
-local Deltype = 1
-local DeleteBtn = Instance.new("TextButton", content)
-DeleteBtn.Size = UDim2.new(0.7, 0, 0, 30)
-DeleteBtn.Position = UDim2.new(0.05, 0, 0, 165)
-DeleteBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-DeleteBtn.Text = "Delete mode deactivated"
-DeleteBtn.TextColor3 = Color3.new(1,1,1)
-DeleteBtn.Font = Enum.Font.GothamBold
-DeleteBtn.TextSize = 12
-Instance.new("UICorner", DeleteBtn)
-
-DeleteBtn.MouseButton1Click:Connect(function()
-	if Delete and Deltype == 2 then
-		DeleteBtn.Text = "Delete mode Max"
-		Deltype = 3
-	else
-		Delete = not Delete
-		if Deltype == 3 then
-			Deltype = 1
-		else
-			Deltype += 1
-		end
-		DeleteBtn.Text = Delete and "Delete mode activated" or "Delete mode deactivated"
-		DeleteBtn.BackgroundColor3 = Delete and Color3.fromRGB(20, 80, 20) or Color3.fromRGB(80, 20, 20)
-	end
-end)
-
-local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
-
-local Keybind = Enum.KeyCode.F
-local Selecting = false
-local ResetVelocityBtn = Instance.new("TextButton", content)
-ResetVelocityBtn.Size = UDim2.new(0.15, 0, 0, 30)
-ResetVelocityBtn.Position = UDim2.new(0.8, 0, 0, 165)
-ResetVelocityBtn.BackgroundColor3 = Color3.fromRGB(139, 132, 255)
-ResetVelocityBtn.Text = "KEYBIND"
-ResetVelocityBtn.TextColor3 = Color3.new(1,1,1)
-ResetVelocityBtn.Font = Enum.Font.GothamBold
-ResetVelocityBtn.TextSize = 12
-Instance.new("UICorner", ResetVelocityBtn)
-
-ResetVelocityBtn.MouseButton1Click:Connect(function()
-	task.wait(0.2)
-	Selecting = not Selecting
-	ResetVelocityBtn.BackgroundColor3 = Selecting and Color3.fromRGB(210, 200, 255) or Color3.fromRGB(139, 132, 255)
-end)
-
-local HoldingKeybind = false
-UIS.InputEnded:Connect(function(input)
-	if Selecting == false and input.KeyCode == Keybind then
-		HoldingKeybind = false
-	end
-end)
-
-local function onInputBegan(input, gameProcessed)
-	if gameProcessed then return end
-
-	if Selecting then
-		local mouseInputTypes = {
-			Enum.UserInputType.MouseButton1,
-			Enum.UserInputType.MouseButton2,
-			Enum.UserInputType.MouseButton3
-		}
-		if table.find(mouseInputTypes, input.UserInputType) then
-			task.wait(1)
-			if Selecting == false then
-				return
-			end
-		end
-		Keybind = input.KeyCode
-		ResetVelocityBtn.Text = Keybind
-
-		Selecting = false
-		ResetVelocityBtn.BackgroundColor3 = Color3.fromRGB(139, 132, 255)
-	end
-	if Selecting == false and input.KeyCode == Keybind then
-		HoldingKeybind = true
-		while HoldingKeybind and task.wait(0.01) do
-			local character = player.Character or player.CharacterAdded:Wait()
-			local rootPart = character:WaitForChild("HumanoidRootPart")
-			rootPart.AssemblyLinearVelocity = Vector3.zero
-			rootPart.AssemblyAngularVelocity = Vector3.zero
-		end
-	end
+local function ResetVelocity(inst)
+  local Keybind = Enum.KeyCode.F
+  local Selecting = false
+  
+  inst.MouseButton1Click:Connect(function()
+  	task.wait(0.2)
+  	Selecting = not Selecting
+  	inst.BackgroundColor3 = Selecting and Color3.fromRGB(210, 200, 255) or Color3.fromRGB(139, 132, 255)
+  end)
+  
+  local HoldingKeybind = false
+  UIS.InputEnded:Connect(function(input)
+  	if Selecting == false and input.KeyCode == Keybind then
+  		HoldingKeybind = false
+  	end
+  end)
+  
+  local function onInputBegan(input, gameProcessed)
+  	if gameProcessed then return end
+  
+  	if Selecting then
+  		local mouseInputTypes = {
+  			Enum.UserInputType.MouseButton1,
+  			Enum.UserInputType.MouseButton2,
+  			Enum.UserInputType.MouseButton3
+  		}
+  		if table.find(mouseInputTypes, input.UserInputType) then
+  			task.wait(1)
+  			if Selecting == false then
+  				return
+  			end
+  		end
+  		Keybind = input.KeyCode
+  		ResetVelocityBtn.Text = Keybind
+  
+  		Selecting = false
+  		ResetVelocityBtn.BackgroundColor3 = Color3.fromRGB(139, 132, 255)
+  	end
+  	if Selecting == false and input.KeyCode == Keybind then
+  		HoldingKeybind = true
+  		while HoldingKeybind and task.wait(0.01) do
+  			local character = player.Character or player.CharacterAdded:Wait()
+  			local rootPart = character:WaitForChild("HumanoidRootPart")
+  			rootPart.AssemblyLinearVelocity = Vector3.zero
+  			rootPart.AssemblyAngularVelocity = Vector3.zero
+  		end
+  	end
+  end
+  UIS.InputBegan:Connect(onInputBegan)
 end
-UIS.InputBegan:Connect(onInputBegan)
 
-local deleted = player.Character:GetChildren()
-local Orig = {}
+local function TrackFly(inst)
+  local RUNLOOP = false
+  local function run()
+  	repeat
+  		task.spawn(function()
+  			local Controller = game.Workspace.Track.Loiper2:FindFirstChild("VehicleSeat")
+  			print("Before  ".. Controller.AssemblyLinearVelocity)
+  			local camera = workspace.CurrentCamera
+  			local lookDirection = camera.CFrame.LookVector
+  			Controller.AssemblyLinearVelocity = lookDirection * _G.TrackFly
+  			print("After  ".. Controller.AssemblyLinearVelocity)
+  		end)
+  		task.wait(0.2)
+  	until RUNLOOP == false
+  end
+  
+  inst.MouseButton1Click:Connect(function()
+  	RUNLOOP = not RUNLOOP
+  	if RUNLOOP then run() end
+  	inst.Text = RUNLOOP and "Track Fly ON" or "Track Fly OFF"
+  	inst.BackgroundColor3 = RUNLOOP and Color3.new(0, 0.8, 0) or Color3.new(0.8, 0, 0)
+  end)
+end
 
-mouse.Button1Down:Connect(function()
-	local rayParams = RaycastParams.new()
-	rayParams.FilterType = Enum.RaycastFilterType.Exclude
-	rayParams.FilterDescendantsInstances = deleted
+local function Delete(inst)
+  local Delete = false
+  local Deltype = 1
+  inst.MouseButton1Click:Connect(function()
+  	Deltype += 1
+  	if Deltype > 3 then Deltype = 1 end
+  	Delete = Deltype > 1
+  	
+  	inst.Text = Deltype == 3 and "Delete mode Max" or Deltype == 2 and "Delete mode activated" or Deltype == 1 and "Delete mode deactivated"
+  	inst.BackgroundColor3 = Deltype == 3 and Color3.new(0.1, 0.9, 0) or Deltype == 2 and Color3.new(1, 0.5, 0) or Deltype == 1 and Color3.new(0.8, 0, 0)
+  end)
+  
+  local deleted = player.Character:GetChildren()
+  local Orig = {}
+  
+  mouse.Button1Down:Connect(function()
+  	local rayParams = RaycastParams.new()
+  	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+  	rayParams.FilterDescendantsInstances = deleted
+  
+  	if not Delete then rayParams.FilterType = Enum.RaycastFilterType.Include end
+  	local ray = workspace:Raycast(workspace.CurrentCamera.CFrame.Position, mouse.Hit.LookVector * 100, rayParams)
+  	if not ray then return end
+  
+  	local target = ray.Instance
+  	if target then
+  		if table.find(deleted, target) and not Delete and target.Parent ~= player.Character then
+  			print("return to normal")
+  			target.Transparency = Orig[target].Transparency
+  			target.CanCollide = Orig[target].CanCollide
+  			Orig[target] = nil
+  			table.remove(deleted, table.find(deleted, target))
+  		elseif Delete and not table.find(deleted, target) and target.Parent ~= player.Character then
+  			print("hide")
+  			Orig[target] = {Transparency = target.Transparency, CanCollide = target.CanCollide}
+  			if Deltype == 3 then
+  				target:Destroy()
+  			else
+  				target.Transparency = 0.8
+  				target.CanCollide = false
+  				table.insert(deleted, target)
+  			end
+  		end
+  	end
+  end)
+end
 
-	if not Delete then rayParams.FilterType = Enum.RaycastFilterType.Include end
-	local ray = workspace:Raycast(workspace.CurrentCamera.CFrame.Position, mouse.Hit.LookVector * 100, rayParams)
-	if not ray then return end
-
-	local target = ray.Instance
-	if target then
-		if table.find(deleted, target) and not Delete and target.Parent ~= player.Character then
-			print("return to normal")
-			target.Transparency = Orig[target].Transparency
-			target.CanCollide = Orig[target].CanCollide
-			Orig[target] = nil
-			table.remove(deleted, table.find(deleted, target))
-		elseif Delete and not table.find(deleted, target) and target.Parent ~= player.Character then
-			print("hide")
-			Orig[target] = {Transparency = target.Transparency, CanCollide = target.CanCollide}
-			if Deltype == 3 then
-				target:Destroy()
-			else
-				target.Transparency = 0.8
-				target.CanCollide = false
-				table.insert(deleted, target)
-			end
-		end
-	end
-end)
-
-local SitBtn = Instance.new("TextButton", content)
-SitBtn.Size = UDim2.new(0.2, 0, 0, 30)
-SitBtn.Position = UDim2.new(0.2, 0, 0, 205)
-SitBtn.BackgroundColor3 = Color3.fromRGB(40, 8, 147)
-SitBtn.Text = "Sit"
-SitBtn.TextColor3 = Color3.new(1,1,1)
-SitBtn.Font = Enum.Font.GothamBold
-SitBtn.TextSize = 12
-Instance.new("UICorner", SitBtn)
-
-SitBtn.MouseButton1Click:Connect(function()
-	if player.Character and player.Character:FindFirstChild("Humanoid") then
-		player.Character.Humanoid.Sit = not player.Character.Humanoid.Sit
-	end
-end)
-
--- CHARACTER VALUES AND INPUTS HANDLER -----------------------------------------------------------------------------------------------------------
+-- CHARACTER VALUES AND INSTANCE CODE STARTER -----------------------------------------------------------------------------------------------------------
+InfJump(GetInstance("InfJumpBtn", 1, "TextButton"))
+AutoSetSpeed(GetInstance("AutoSetSpeedBtn", 1, "TextButton"))
+AutoSetJump(GetInstance("AutoSetJumpBtn", 1, "TextButton"))
+Sit(GetInstance("SitBtn", 1, "TextButton"))
+Fling(GetInstance("FlingBtn", 1, "TextButton"))
+ResetVelocity(GetInstance("ResetVelocityBtn", 1, "TextButton"))
+Delete(GetInstance("DeleteBtn", 1, "TextButton"))
+TrackFly(GetInstance("TrackFlyBtn", 2, "TextButton"))
 
 task.spawn(function()
 	while task.wait(0.1) and sg do
 		pcall(function()
 			if player.Character and player.Character:FindFirstChild("Humanoid") then
 				local hum = player.Character.Humanoid
-				if AutoSetSpeed then hum.WalkSpeed = _G.SpeedVal end
-				if AutoSetSpeed then hum.UseJumpPower = true end
-				if AutoSetJump then hum.JumpPower = _G.JumpVal end
+				if _G.ASjump then hum.WalkSpeed = _G.SpeedVal end
+				if _G.ASspeed then hum.UseJumpPower = true end
+				if _G.ASspeed then hum.JumpPower = _G.JumpVal end
 			end
 		end)
 	end
 end)
 
 table.insert(rainbowText, title)
-
 RS.RenderStepped:Connect(function()
 	local h = tick() % 5 / 5
 	for _, inst in ipairs(rainbowText) do
