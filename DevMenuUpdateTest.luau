@@ -23,6 +23,8 @@ local LoadedPage = 1
 local pageTitles = {}
 local pages = {}
 local rainbowText = {}
+local AllInstances = {}
+local pageNames = {}
 
 -- CONTAINER SETUP -----------------------------------------------------------------------------------------------------------
 for _, child in ipairs(player.PlayerGui:GetChildren()) do
@@ -71,7 +73,9 @@ local function SortPages()
 	table.sort(sortedKeys, function(id1, id2)
 		return id1 < id2
 	end)
-
+  
+  pageNames = sortedKeys
+  
 	return sortedKeys
 end
 
@@ -133,12 +137,11 @@ local function newContent(page)
 	leftBtn:SetAttribute("inList", true)
 	
 	local PageSplit = Instance.new("Frame", content)
-	PageSplit.Name = "left"
+	PageSplit.Name = "PageSplit"
 	PageSplit.Size = UDim2.new(scaled / 4, 0, 0, 30)
 	PageSplit.Position = UDim2.new((paddingXscale * 2) + (scaled/2), 0, 0, paddingYoffset)
-	PageSplit.Text = "<"
-	PageSplit.TextColor3 = Color3.new(1,1,1)
-	PageSplit.BackgroundTransparency = 1
+	PageSplit.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+	PageSplit.BackgroundTransparency = 0.5
 	PageSplit:SetAttribute("inList", true)
 	
 	return content
@@ -146,6 +149,18 @@ end
 
 local function getPageContentParent(page)
 	if pages[page] == nil then
+	  if typeof(page) == "Instance" then
+	    if page:GetAttribute("Page") then
+	      return page
+	    end
+	  elseif typeof(page) == "table" then
+	    if page[1] and page[1].Parent then
+	      local temp = page[1].Parent
+  	    if temp:GetAttribute("Page") then
+  	      return temp
+	      end
+	    end
+	  end
 		pages[page] = newContent(page)
 		print("NEW PAGE CREATED")
 		print(pages[page])
@@ -178,19 +193,67 @@ local function getLowestItemInPage(page)
 	return lowest
 end
 
+local function AddToAllInstances(inst, lookupVal, page)
+  if inst then
+    local LKV = lookupVal or inst.Name
+    local P = page or LoadedPage
+    if not AllInstances[P] then
+      AllInstances[P][LKV] = inst
+    else
+      AllInstances[P][LKV] = inst
+    end
+  end
+end
+
+local function GetInstance(name, page, instType)
+  local function FitsCriteria(i, n, t)
+    if n and n ~= i.Name then return false end
+    if t and not i:IsA(t) then return false end
+    return true
+  end
+  
+  local function LoopPage(p, n, t)
+    local list = p
+    if typeof(p) == "Instance" then
+      list = p:GetDescendants()
+    end
+    for i, inst in ipairs(list) do
+      if FitsCriteria(inst, n, t) then
+        return inst
+      end
+    end
+    return false
+  end
+  
+  local p = SortPages()
+  local ans
+  if name then
+    if not page then
+      for i = 1, i <= #p, i++ do
+        local pg = getPageContentParent(p[i])
+        ans = LoopPage(pg, name, instType)
+        if ans then return ans end
+      end
+    else
+      ans = LoopPage(getPageContentParent(page), name, instType)
+      if ans then return ans end
+    end
+  end
+end
+
 local connection1, connection2 = nil, nil
 
 sg.Destroying:Connect(function()
-	if connection1 then connection1:Disconnect() connection1 = nil end
-	if connection2 then connection2:Disconnect() connection2 = nil end
+	if connection1 and connection1.Connected then connection1:Disconnect() connection1 = nil end
+	if connection2 and connection1.Connected then connection2:Disconnect() connection2 = nil end
 end)
 
 local function SwapPage(NewPage)
 	local p1 = getPageContentParent(LoadedPage)
 	local p2 = getPageContentParent(NewPage)
 
-	if connection1 then connection1:Disconnect() connection1 = nil end
-	if connection2 then connection2:Disconnect() connection2 = nil end
+	if connection1 and connection1.Connected then connection1:Disconnect() connection1 = nil end
+	if connection2 and connection1.Connected then connection2:Disconnect() connection2 = nil end
 
 	connection1 = p2:FindFirstChild("right")
 	if connection1 then
@@ -339,9 +402,10 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page, 
 	return holder
 end
 
-local function AddItem(inst, page, ItemSize, ItemType, NewLine, Color, Text, TextColor, Max, default, globalVar)
+local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Text, TextColor, Max, default, globalVar)
 	-- inst refers to the Instance        -->  SET TO FALSE WITH SLIDER
 	-- page refers to which page the item will be held on
+	-- name is the lookup key it will use for accessing this instance
 	-- ItemSize is 1: Max stretch, 2: Half stretch, 3: Quarter stretch
 	-- ItemType is "Slider" or the Instance name BEFORE renaming it (instance type)
 	-- NewLine is a bool, whether you write the item on a new line or on the current line of content
@@ -402,8 +466,8 @@ local function AddItem(inst, page, ItemSize, ItemType, NewLine, Color, Text, Tex
 	elseif ItemType == "Slider" then
 		-- force proper height
 		--startSize = UDim2.new(startSize.X.Scale, 0, 0, SLIDER_HEIGHT)
-		local r1, r2 = addSlider(Text, startPos, startSize, Max, default, globalVar, TextColor, page, NewLine)
-		if r1 and r2 then
+		local r1 = addSlider(Text, startPos, startSize, Max, default, globalVar, TextColor, page, NewLine)
+		if r1 then
 			print(r1.Position)
 			InsertInstanceIntoPage(r1)
 		end
@@ -416,6 +480,7 @@ local function AddItem(inst, page, ItemSize, ItemType, NewLine, Color, Text, Tex
 		UIC.CornerRadius = UDim.new(0, 1)
 		InsertInstanceIntoPage(inst)
 	end
+	
 end
 
 -- SETUP HEADER CONTENANTS -----------------------------------------------------------------------------------------------------------
@@ -445,6 +510,8 @@ end)
 -- CREATE SLIDERS -----------------------------------------------------------------------------------------------------------
 
 AddItem(nil, 1, 1, "Slider", true, nil, "Speed", nil, 300, 16, "SpeedVal")
+AddItem(nil, 1, 1, "Slider", true, nil, "Jump", nil, 300, 16, "JumpVal")
+local 
 AddItem(nil, 1, 1, "Slider", true, nil, "Jump", nil, 300, 16, "JumpVal")
 AddItem(nil, 1, 2, "Slider", true, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
 AddItem(nil, 1, 1, "Slider", false, nil, "Velocity Power", nil, 300, 16, "TrackFly")
