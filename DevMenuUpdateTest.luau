@@ -546,9 +546,9 @@ local function LoadAllInstances()
   AddItem(nil, 1, "SpeedSlider", 1, "Slider", true, nil, nil, "Speed", nil, 300, 16, "SpeedVal")
   AddItem(nil, 1, "JumpSlider", 1, "Slider", true, nil, nil, "Jump", nil, 300, 16, "JumpVal")
   AddItem(nil, 1, "InfJumpDebounceSlider", 1, "Slider", true, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
-  AddItem(Instance.new("TextButton"), 1, "InfJumpToggleBtn", 2, "TextButton", true, Color3.new(0.8, 0, 0), 0, "InfJump OFF", nil, nil, nil, nil)
-  AddItem(Instance.new("TextButton"), 1, "AutoSetSpeedBtn", 3, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSetSpeed ON", nil, nil, nil, nil)
-  AddItem(Instance.new("TextButton"), 1, "AutoSetJumpBtn", 3, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSetJump ON", nil, nil, nil, nil)
+  AddItem(Instance.new("TextButton"), 1, "InfJumpBtn", 2, "TextButton", true, Color3.new(0.8, 0, 0), 0, "InfJump OFF", nil, nil, nil, nil)
+  AddItem(Instance.new("TextButton"), 1, "AutoSetSpeedBtn", 3, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSet Speed ON", nil, nil, nil, nil)
+  AddItem(Instance.new("TextButton"), 1, "AutoSetJumpBtn", 3, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSet Jump ON", nil, nil, nil, nil)
   AddItem(Instance.new("Frame"), 1, "SplitOffHumanoidProperties", 1, "Frame", true, Color3.new(0.2, 0.2, 0.2), 0.7, nil, nil, nil, nil)
   
   -- HUMANOID STATES (FLING, SIT, RESET-VELOCITY)
@@ -567,10 +567,77 @@ local function LoadAllInstances()
 end
 
 LoadAllInstances()
-print("Done!")
-task.wait(1000)
+print("Finished Loading Instances!")
+
+-- INSTANCE BASED CODE -----------------------------------------------------------------------------------------------------------
+
+-- AutoSetSpeedBtn
+-- AutoSetJumpBtn
+-- FlingBtn
+-- SitBtn
+-- ResetVelocityBtn
+-- DeleteBtn
+-- TrackFlyBtn
+
+local function InfJump(inst)
+  inst.MouseButton1Click:Connect(function()
+	  _G.InfJump = (inst.Text == "Inf Jump OFF")
+	  inst.Text = _G.InfJump and "Inf Jump ON" or "Inf Jump OFF"
+	  inst.BackgroundColor3 = _G.InfJump and Color3.new(0, 0.8, 0) or Color3.new(0.8, 0, 0)
+  end)
+  
+  local LastJump = time()
+  local Jumping = false
+  
+  task.spawn(function()
+  	local humanoid = player.Character.Humanoid
+  	while task.wait() and sg do
+  		if _G.InfJump and time() - LastJump > _G.InfJumpDelay / 1000 and player.Character and player.Character:FindFirstChildOfClass("Humanoid") and Jumping then
+  			LastJump = time()
+  			player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+  		end
+  	end
+  end)
+  
+  UIS.InputEnded:Connect(function(input)
+  	if input.KeyCode == Enum.KeyCode.Space then Jumping = false end
+  end)
+  
+  UIS.InputBegan:Connect(function(input, gpe)
+  	if input.KeyCode == Enum.KeyCode.Space and not gpe then Jumping = true end
+  end)
+end
+
+local function AutoSetJump(inst)
+  local AutoSetJump = true
+  inst.MouseButton1Click:Connect(function()
+  	AutoSetJump = not AutoSetJump
+  	if AutoSetJump and inst then
+  		inst.BackgroundColor3 = Color3.new(0, 0.8, 0)
+  		inst.Text = "AutoSet Jump ON"
+  	else
+  		inst.BackgroundColor3 = Color3.new(0.8, 0, 0)
+  		inst.Text = "AutoSet Jump OFF"
+  	end
+  end)
+end
+
+local function AutoSetSpeed(inst)
+  local AutoSetSpeed = true
+  inst.MouseButton1Click:Connect(function()
+  	AutoSetSpeed = not AutoSetSpeed
+  	if AutoSetSpeed and inst then
+  		inst.BackgroundColor3 = Color3.new(0, 0.8, 0)
+  		inst.Text = "AutoSet Speed ON"
+  	else
+  		inst.BackgroundColor3 = Color3.new(0.8, 0, 0)
+  		inst.Text = "AutoSet Speed OFF"
+  	end
+  end)
+end
 
 -- OLD CODE TO REPLACE -----------------------------------------------------------------------------------------------------------
+task.wait(1000)
 local TrackFly = Instance.new("TextButton", content)
 TrackFly.Size = UDim2.new(0.9, 0, 0, 20)
 TrackFly.Position = UDim2.new(0.05, 0, 0, 275)
@@ -601,22 +668,6 @@ TrackFly.MouseButton1Click:Connect(function()
 	if RUNLOOP then
 		run()
 	end
-end)
-
-local ijBtn = Instance.new("TextButton", content)
-ijBtn.Size = UDim2.new(0.9, 0, 0, 30)
-ijBtn.Position = UDim2.new(0.05, 0, 0, 125)
-ijBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-ijBtn.Text = "Inf Jump: OFF"
-ijBtn.TextColor3 = Color3.new(1,1,1)
-ijBtn.Font = Enum.Font.GothamBold
-ijBtn.TextSize = 12
-Instance.new("UICorner", ijBtn)
-
-ijBtn.MouseButton1Click:Connect(function()
-	_G.InfJump = not _G.InfJump
-	ijBtn.Text = _G.InfJump and "Inf Jump: ON" or "Inf Jump: OFF"
-	ijBtn.BackgroundColor3 = _G.InfJump and Color3.fromRGB(20, 80, 20) or Color3.fromRGB(80, 20, 20)
 end)
 
 function fling()
@@ -791,52 +842,6 @@ SitBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-local SetJumpBtn = Instance.new("TextButton", content)
-SetJumpBtn.Size = UDim2.new(0.25, 0, 0, 30)
-SetJumpBtn.Position = UDim2.new(0.4, 0, 0, 205)
-SetJumpBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 20)
-SetJumpBtn.Text = "Auto Set Jump (On)"
-SetJumpBtn.TextColor3 = Color3.new(1,1,1)
-SetJumpBtn.Font = Enum.Font.GothamBold
-SetJumpBtn.TextSize = 12
-SetJumpBtn.TextWrapped = true
-Instance.new("UICorner", SetJumpBtn)
-
-local AutoSetJump = true
-SetJumpBtn.MouseButton1Click:Connect(function()
-	AutoSetJump = not AutoSetJump
-	if AutoSetJump and SetJumpBtn then
-		SetJumpBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 20)
-		SetJumpBtn.Text = "Auto Set Jump (On)"
-	else
-		SetJumpBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-		SetJumpBtn.Text = "Auto Set Jump (Off)"
-	end
-end)
-
-local SetSpeedBtn = Instance.new("TextButton", content)
-SetSpeedBtn.Size = UDim2.new(0.25, 0, 0, 30)
-SetSpeedBtn.Position = UDim2.new(0.7, 0, 0, 205)
-SetSpeedBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 20)
-SetSpeedBtn.Text = "Auto Set Speed (On)"
-SetSpeedBtn.TextColor3 = Color3.new(1,1,1)
-SetSpeedBtn.Font = Enum.Font.GothamBold
-SetSpeedBtn.TextSize = 12
-SetSpeedBtn.TextWrapped = true
-Instance.new("UICorner", SetSpeedBtn)
-
-local AutoSetSpeed = true
-SetSpeedBtn.MouseButton1Click:Connect(function()
-	AutoSetSpeed = not AutoSetSpeed
-	if AutoSetSpeed and SetSpeedBtn then
-		SetSpeedBtn.BackgroundColor3 = Color3.fromRGB(20, 80, 20)
-		SetSpeedBtn.Text = "Auto Set Speed (On)"
-	else
-		SetSpeedBtn.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
-		SetSpeedBtn.Text = "Auto Set Speed (Off)"
-	end
-end)
-
 -- CHARACTER VALUES AND INPUTS HANDLER -----------------------------------------------------------------------------------------------------------
 
 task.spawn(function()
@@ -858,30 +863,5 @@ RS.RenderStepped:Connect(function()
 	local h = tick() % 5 / 5
 	for _, inst in ipairs(rainbowText) do
 		inst.TextColor3 = Color3.fromHSV(h, 1, 1)
-	end
-end)
-
-local LastJump = time()
-local Jumping = false
-
-task.spawn(function()
-	local humanoid = player.Character.Humanoid
-	while task.wait() and sg do
-		if _G.InfJump and time() - LastJump > _G.InfJumpDelay / 1000 and player.Character and player.Character:FindFirstChildOfClass("Humanoid") and Jumping then
-			LastJump = time()
-			player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-		end
-	end
-end)
-
-UIS.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Space then
-		Jumping = false
-	end
-end)
-
-UIS.InputBegan:Connect(function(input, gpe)
-	if input.KeyCode == Enum.KeyCode.Space and not gpe then
-		Jumping = true
 	end
 end)
