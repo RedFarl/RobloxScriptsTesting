@@ -129,8 +129,10 @@ local function newContent(page)
 end
 
 local function getPageContentParent(page)
-  if not pages[page] then
+  if pages[page] == nil then
     pages[page] = newContent(page)
+	print("NEW PAGE CREATED")
+	print(pages[page])
   end
   return pages[page]
 end
