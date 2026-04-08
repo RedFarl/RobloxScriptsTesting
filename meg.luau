@@ -1,5 +1,3 @@
-task.wait(2)
-
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local mouse = player:GetMouse() or player:GetMouse():Wait()
@@ -201,7 +199,7 @@ local function getLowestItemInPage(page)
 			local CP = inst:GetAttribute("Page")
 			if CP == page then
 				for _, i in ipairs(inst:GetChildren()) do
-					if (lowest == nil or i.Position.Y.Offset > lowest.Position.Y.Offset) and i:GetAttribute("inList") then
+					if (((lowest == nil or i.Position.Y.Offset > lowest.Position.Y.Offset) or (lowest == nil or i.Position.X.Scale > lowest.Position.X.Scale)) and i:GetAttribute("inList")) then
 						lowest = i
 					end
 				end
@@ -306,7 +304,6 @@ local function SwapPage(NewPage)
 	main:TweenSize(GetMainSize(NewPage), "Out", "Quad", 0.2, true)
 	LoadedPage = NewPage
 end
-SwapPage(1)
 
 -- INSERT AND CREATE ITEMS / SLIDERS -----------------------------------------------------------------------------------------------------------
 local draggingSlider = nil
@@ -442,7 +439,6 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tra
 	local content = getPageContentParent(page)
 	local items = pages[page]
 	local ti = getLowestItemInPage(page) or {Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(0, 0, 0, 0)}
-	local SLIDER_HEIGHT = IconSizeY
 
 	local Ystart = 0
 	local Xstart = 0
@@ -452,7 +448,6 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tra
 	else
 		Xstart = ti.Position.X.Scale + ti.Size.X.Scale + paddingXscale
 		Ystart = ti.Position.Y.Offset
-
 	end
 	local startPos = UDim2.new(Xstart, 0, 0, Ystart)
 
@@ -464,14 +459,12 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tra
 			startPos = UDim2.new(Xstart, 0, 0, Ystart)
 			startSize = UDim2.new(1 - startPos.X.Scale - paddingXscale, 0, 0, IconSizeY)
 		end
-	elseif ItemSize == 2 then
-		local tempVal = 1 - (startPos.X.Scale + (3 * paddingXscale))
-		startSize = UDim2.new(tempVal/2, 0, 0, IconSizeY)
-	elseif ItemSize == 3 then
-		local tempVal = 1 - (startPos.X.Scale + (5 * paddingXscale))
-		startSize = UDim2.new(tempVal/4, 0, 0, IconSizeY)
+	else
+		local tempVal = 1 - (startPos.X.Scale)
+		startSize = UDim2.new(tempVal*ItemSize, 0, 0, IconSizeY)
 	end
 	if ItemType == "TextButton" or ItemType == "TextLabel" then
+		inst.TextWrapped = true
 		inst.Size = startSize
 		inst.Position = startPos
 		if Color then inst.BackgroundColor3 = Color end
@@ -485,8 +478,6 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tra
 		Instance.new("UICorner", inst)
 		InsertInstanceIntoPage(inst, page)
 	elseif ItemType == "Slider" then
-		-- force proper height
-		--startSize = UDim2.new(startSize.X.Scale, 0, 0, SLIDER_HEIGHT)
 		local r1 = addSlider(Text, startPos, startSize, Max, default, globalVar, TextColor, page, NewLine)
 		if r1 then
 			InsertInstanceIntoPage(r1, page)
@@ -545,14 +536,14 @@ local function LoadAllInstances()
 	AddItem(nil, 1, "SpeedSlider", 1, "Slider", true, nil, nil, "Speed", nil, 300, 16, "SpeedVal")
 	AddItem(nil, 1, "JumpSlider", 1, "Slider", true, nil, nil, "Jump", nil, 300, 16, "JumpVal")
 	AddItem(nil, 1, "InfJumpDebounceSlider", 1, "Slider", true, nil, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
-	AddItem(Instance.new("TextButton"), 1, "InfJumpBtn", 2, "TextButton", true, Color3.new(0.8, 0, 0), 0, "InfJump OFF", nil, nil, nil, nil)
-	AddItem(Instance.new("TextButton"), 1, "AutoSetSpeedBtn", 3, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSet Speed ON", nil, nil, nil, nil)
-	AddItem(Instance.new("TextButton"), 1, "AutoSetJumpBtn", 3, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSet Jump ON", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 1, "InfJumpBtn", 0.5, "TextButton", true, Color3.new(0.8, 0, 0), 0, "InfJump OFF", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 1, "AutoSetSpeedBtn", 0.5, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSet Speed ON", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 1, "AutoSetJumpBtn", 0.99, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSet Jump ON", nil, nil, nil, nil)
 	AddItem(Instance.new("Frame"), 1, "SplitOffHumanoidProperties", 1, "Frame", true, Color3.new(0.2, 0.2, 0.2), 0.7, nil, nil, nil, nil)
 
 	-- HUMANOID STATES (FLING, SIT, RESET-VELOCITY)
-	AddItem(Instance.new("TextButton"), 1, "FlingBtn", 2, "TextButton", true, Color3.new(0.5, 0, 0.5), 0, "Fling Character", nil, nil, nil, nil)
-	AddItem(Instance.new("TextButton"), 1, "SitBtn", 2, "TextButton", false, Color3.new(0.5, 0, 0.5), 0, "Sit Character", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 1, "FlingBtn", 0.5, "TextButton", true, Color3.new(0.5, 0, 0.5), 0, "Fling Character", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 1, "SitBtn", 0.5, "TextButton", false, Color3.new(0.5, 0, 0.5), 0, "Sit Character", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 1, "ResetVelocityBtn", 1, "TextButton", true, Color3.new(0.7, 0.6, 0.84), 0, "Reset Velocity Keybind: F", nil, nil, nil, nil)
 	AddItem(Instance.new("Frame"), 1, "SplitOffHumanoidStates", 1, "Frame", true, Color3.new(0.2, 0.2, 0.2), 0.7, nil, nil, nil, nil)
 
@@ -563,6 +554,8 @@ local function LoadAllInstances()
 	-- TRACK FLY (SPEED, TOGGLE)
 	AddItem(nil, 2, "VelocityPowerSlider", 1, "Slider", true, nil, nil, "Velocity Power", nil, 300, 16, "TrackFly")
 	AddItem(Instance.new("TextButton"), 2, "TrackFlyBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Track Fly OFF", nil, nil, nil, nil)
+	
+	SwapPage(1)
 end
 
 LoadAllInstances()
@@ -795,9 +788,9 @@ task.spawn(function()
 		pcall(function()
 			if player.Character and player.Character:FindFirstChild("Humanoid") then
 				local hum = player.Character.Humanoid
-				if _G.ASjump then hum.WalkSpeed = _G.SpeedVal end
-				if _G.ASspeed then hum.UseJumpPower = true end
-				if _G.ASspeed then hum.JumpPower = _G.JumpVal end
+				if _G.ASspeed then hum.WalkSpeed = _G.SpeedVal end
+				if _G.ASjump then hum.UseJumpPower = true end
+				if _G.ASjump then hum.JumpPower = _G.JumpVal end
 			end
 		end)
 	end
