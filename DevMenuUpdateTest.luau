@@ -138,8 +138,8 @@ local function newContent(page)
 	
 	local PageSplit = Instance.new("Frame", content)
 	PageSplit.Name = "PageSplit"
-	PageSplit.Size = UDim2.new(scaled / 4, 0, 0, 30)
-	PageSplit.Position = UDim2.new((paddingXscale * 2) + (scaled/2), 0, 0, paddingYoffset)
+	PageSplit.Size = UDim2.new(scaled / 4, 0, 0, 5)
+	PageSplit.Position = UDim2.new((paddingXscale * 2) + (scaled/2), 0, 0, 30 + paddingYoffset*2)
 	PageSplit.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
 	PageSplit.BackgroundTransparency = 0.5
 	PageSplit:SetAttribute("inList", true)
@@ -151,16 +151,30 @@ local function getPageContentParent(page)
 	if pages[page] == nil then
 	  if typeof(page) == "Instance" then
 	    if page:GetAttribute("Page") then
+	      warn("Asking for pageContent using pageContent")
 	      return page
 	    end
 	  elseif typeof(page) == "table" then
 	    if page[1] and page[1].Parent then
 	      local temp = page[1].Parent
   	    if temp:GetAttribute("Page") then
+  	      warn("Asking for pageContent using pageContent list of children")
   	      return temp
 	      end
 	    end
 	  end
+	  local values = {}
+	  for a, id in pairs(pageTitles) do
+	  	values[id] = a
+	  end
+    if values[page] then
+      local p = getPageContentParent(values[page])
+      if p then
+        warn("Asking for pageContent from pageTitle")
+        return p
+      end
+    end
+    
 		pages[page] = newContent(page)
 		print("NEW PAGE CREATED")
 		print(pages[page])
@@ -193,15 +207,19 @@ local function getLowestItemInPage(page)
 	return lowest
 end
 
+local function GetMainSize(page)
+  local lowest = getLowestItemInPage(page)
+  if not lowest then return UDim2.new(0, 260, 0, 350) end
+  local Ysize = lowest.Position.Y.Offset + lowest.Size.Y.Offset + paddingYoffset
+  return UDim2.new(0, 260, 0, Ysize)
+end
+
 local function AddToAllInstances(inst, lookupVal, page)
   if inst then
     local LKV = lookupVal or inst.Name
     local P = page or LoadedPage
-    if not AllInstances[P] then
-      AllInstances[P][LKV] = inst
-    else
-      AllInstances[P][LKV] = inst
-    end
+    if not AllInstances[P] then AllInstances[P] = {} end
+    if AllInstances[P] then AllInstances[P][LKV] = inst end
   end
 end
 
@@ -235,7 +253,7 @@ local function GetInstance(name, page, instType)
         if ans then return ans end
       end
     else
-      ans = LoopPage(getPageContentParent(page), name, instType)
+      ans = LoopPage(AllInstances[page], name, instType)
       if ans then return ans end
     end
   end
@@ -282,6 +300,10 @@ local function SwapPage(NewPage)
 			end
 		end
 	end
+	
+	local newMainSize = GetMainSize(page)
+	main:TweenSize(newMainSize, "Out", "Quad", 0.2, true)
+	
 	LoadedPage = NewPage
 end
 SwapPage(1)
@@ -507,11 +529,8 @@ clsBtn.MouseButton1Click:Connect(function()
 	sg:Destroy()
 end)
 
--- CREATE SLIDERS -----------------------------------------------------------------------------------------------------------
-
+-- CREATE ALL INSTANCES -----------------------------------------------------------------------------------------------------------
 AddItem(nil, 1, 1, "Slider", true, nil, "Speed", nil, 300, 16, "SpeedVal")
-AddItem(nil, 1, 1, "Slider", true, nil, "Jump", nil, 300, 16, "JumpVal")
-local 
 AddItem(nil, 1, 1, "Slider", true, nil, "Jump", nil, 300, 16, "JumpVal")
 AddItem(nil, 1, 2, "Slider", true, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
 AddItem(nil, 1, 1, "Slider", false, nil, "Velocity Power", nil, 300, 16, "TrackFly")
