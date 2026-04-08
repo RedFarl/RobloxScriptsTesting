@@ -156,8 +156,10 @@ local function SwapPage(NewPage)
   if connection1 then connection1:Disconnect() connection1 = nil end
   if connection2 then connection2:Disconnect() connection2 = nil end
   
-  connection1 = p2["right"].MouseButton1Click:Connect(SwapPage(getNeighboringPage(page, 1)))
-  connection2 = p2["left"].MouseButton1Click:Connect(SwapPage(getNeighboringPage(page, -1)))
+  connection1 = p2.FindFirstChild("right")
+  if connection1 then connection1 = connection1.MouseButton1Click:Connect(SwapPage(getNeighboringPage(page, 1))) end
+  connection2 = p2.FindFirstChild("left")
+  if connection2 then connection2 = connection2.MouseButton1Click:Connect(SwapPage(getNeighboringPage(page, -1))) end
   
   for _, inst in ipairs(main:GetChildren()) do
     if inst.Name == "Content" then
