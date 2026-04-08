@@ -424,7 +424,7 @@ local function addSlider(name, pos, size, max, default, globalVar, color, page, 
 	return holder
 end
 
-local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Text, TextColor, Max, default, globalVar)
+local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Transparency, Text, TextColor, Max, default, globalVar)
 	-- inst refers to the Instance        -->  SET TO FALSE WITH SLIDER
 	-- page refers to which page the item will be held on
 	-- name is the lookup key it will use for accessing this instance
@@ -432,6 +432,7 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tex
 	-- ItemType is "Slider" or the Instance name BEFORE renaming it (instance type)
 	-- NewLine is a bool, whether you write the item on a new line or on the current line of content
 	-- Color is Color3.new() defines the background color
+	-- Transparency is the BackgroundTransparency value
 	-- Text is the text displayed, title of slider or button or label
 	-- TextColor is the color of the text displayed (Text)
 
@@ -478,12 +479,14 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tex
 		inst.Size = startSize
 		inst.Position = startPos
 		if Color then inst.BackgroundColor3 = Color end
-		inst.Text = Text
+		if Transparency then inst.BackgroundTransparency = Transparency end
+		inst.Text = Text or ""
 		if ItemType == "TextLabel" and not TextColor then
 			table.insert(rainbowText, inst)
 		else
 			inst.TextColor3 = TextColor
 		end
+		Instance.new("UICorner", inst)
 		InsertInstanceIntoPage(inst)
 	elseif ItemType == "Slider" then
 		-- force proper height
@@ -497,7 +500,12 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tex
 	  startSize = UDim2.new(startSize.X.Offset, 0, 0, math.max(IconSizeY/5, 5))
 	  inst.Size = startSize
 		inst.Position = startPos
+		if Transparency then inst.BackgroundTransparency = Transparency end
 		if Color then inst.BackgroundColor3 = Color end
+		if not (Color or Transparency) then
+		  inst.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+	    inst.BackgroundTransparency = 0.7
+		end
 		local UIC = Instance.new("UICorner", inst)
 		UIC.CornerRadius = UDim.new(0, 1)
 		InsertInstanceIntoPage(inst)
@@ -530,13 +538,39 @@ clsBtn.MouseButton1Click:Connect(function()
 end)
 
 -- CREATE ALL INSTANCES -----------------------------------------------------------------------------------------------------------
-AddItem(nil, 1, 1, "Slider", true, nil, "Speed", nil, 300, 16, "SpeedVal")
-AddItem(nil, 1, 1, "Slider", true, nil, "Jump", nil, 300, 16, "JumpVal")
-AddItem(nil, 1, 2, "Slider", true, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
-AddItem(nil, 1, 1, "Slider", false, nil, "Velocity Power", nil, 300, 16, "TrackFly")
+local function LoadAllInstances()
+  -- AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Transparency, Text, TextColor, Max, default, globalVar)
+  
+  -- FIRST PAGE
+  -- HUMANOID PROPERTIES (SPEED, JUMP, MULTI-JUMP)
+  AddItem(nil, 1, "SpeedSlider", 1, "Slider", true, nil, nil, "Speed", nil, 300, 16, "SpeedVal")
+  AddItem(nil, 1, "JumpSlider", 1, "Slider", true, nil, nil, "Jump", nil, 300, 16, "JumpVal")
+  AddItem(nil, 1, "InfJumpDebounceSlider", 1, "Slider", true, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
+  AddItem(Instance.new("TextButton"), 1, "InfJumpToggleBtn", 2, "TextButton", true, Color3.new(0.8, 0, 0), 0, "InfJump OFF", nil, nil, nil, nil)
+  AddItem(Instance.new("TextButton"), 1, "AutoSetSpeedBtn", 3, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSetSpeed ON", nil, nil, nil, nil)
+  AddItem(Instance.new("TextButton"), 1, "AutoSetJumpBtn", 3, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSetJump ON", nil, nil, nil, nil)
+  AddItem(Instance.new("Frame"), 1, "SplitOffHumanoidProperties", 1, "Frame", true, Color3.new(0.2, 0.2, 0.2), 0.7, nil, nil, nil, nil)
+  
+  -- HUMANOID STATES (FLING, SIT, RESET-VELOCITY)
+  AddItem(Instance.new("TextButton"), 1, "FlingBtn", 2, "TextButton", true, Color3.new(0.5, 0, 0.5), 0, "Fling Character", nil, nil, nil, nil)
+  AddItem(Instance.new("TextButton"), 1, "SitBtn", 2, "TextButton", false, Color3.new(0.5, 0, 0.5), 0, "Sit Character", nil, nil, nil, nil)
+  AddItem(Instance.new("TextButton"), 1, "ResetVelocityBtn", 1, "TextButton", true, Color3.new(0.7, 0.6, 0.84), 0, "Reset Velocity Keybind: F", nil, nil, nil, nil)
+  AddItem(Instance.new("Frame"), 1, "SplitOffHumanoidStates", 1, "Frame", true, Color3.new(0.2, 0.2, 0.2), 0.7, nil, nil, nil, nil)
+  
+  -- ENVIRONMENTAL CHANGES (DELETE)
+  AddItem(Instance.new("TextButton"), 1, "DeleteBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Delete Mode Deactivated", nil, nil, nil, nil)
+  
+  -- SECOND PAGE
+  -- TRACK FLY
+  AddItem(nil, 2, "VelocityPowerSlider", 1, "Slider", true, nil, nil, "Velocity Power", nil, 300, 16, "TrackFly")
+  AddItem(Instance.new("TextButton"), 1, "TrackFlyBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Track Fly OFF", nil, nil, nil, nil)
+end
+
+LoadAllInstances()
+print("Done!")
 task.wait(1000)
 
--- CREATE BUTTONS AND TEXT -----------------------------------------------------------------------------------------------------------
+-- OLD CODE TO REPLACE -----------------------------------------------------------------------------------------------------------
 local TrackFly = Instance.new("TextButton", content)
 TrackFly.Size = UDim2.new(0.9, 0, 0, 20)
 TrackFly.Position = UDim2.new(0.05, 0, 0, 275)
@@ -803,15 +837,6 @@ SetSpeedBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-local tg = Instance.new("TextLabel", content)
-tg.Size = UDim2.new(1, 0, 0, 20)
-tg.Position = UDim2.new(0, 0, 0, 285)
---tg.Text = "These Are NOT Hacks"
-tg.Text = ""
-tg.Font = Enum.Font.GothamBold
-tg.BackgroundTransparency = 1
-tg.TextSize = 25
-
 -- CHARACTER VALUES AND INPUTS HANDLER -----------------------------------------------------------------------------------------------------------
 
 task.spawn(function()
@@ -828,7 +853,6 @@ task.spawn(function()
 end)
 
 table.insert(rainbowText, title)
-table.insert(rainbowText, tg)
 
 RS.RenderStepped:Connect(function()
 	local h = tick() % 5 / 5
