@@ -131,7 +131,7 @@ local function newContent(page)
 	
 	pageTitle.Focused:Connect(function()
 	  pageTitle.Text = pageTitles[page]
-	end
+	end)
 	
 	pageTitle.FocusLost:Connect(function(enterPressed)
     if not (sg and main) then return end
@@ -276,7 +276,7 @@ local function GetInstance(name, page, instType)
 		if not page then
 			local i = 1
 			repeat
-				i += 1
+				i = i + 1
 				local pg = getPageContentParent(p[i])
 				ans = LoopPage(pg, name, instType)
 				if ans then return ans end
@@ -297,7 +297,7 @@ local function ResetPageTitles()
 		  local pageNum = pg:GetAttribute("Page")
 		  pg:FindFirstChild("PageTitle").Text = ("Page " .. pageNum .. " - " .. pageTitles[pageNum])
 		end
-		i += 1
+		i = i + 1
 	until i > #p
 end
 
@@ -794,7 +794,7 @@ local function Delete(inst)
 	local Delete = false
 	local Deltype = 1
 	inst.MouseButton1Click:Connect(function()
-		Deltype += 1
+		Deltype = Deltype + 1
 		if Deltype > 3 then Deltype = 1 end
 		Delete = Deltype > 1
 
