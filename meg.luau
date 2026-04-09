@@ -6,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "3.0"
+local VersionName = "3.1"
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
@@ -26,6 +26,11 @@ local pages = {}
 local rainbowText = {}
 local AllInstances = {}
 local pageNames = {}
+local Data = {}
+
+-- Pre-define Functions for later use
+local loadData
+local saveData
 
 -- CONTAINER SETUP -----------------------------------------------------------------------------------------------------------
 print("Starting up Athiel's DevMenu v" .. VersionName)
@@ -108,19 +113,38 @@ local function newContent(page)
 	content.Position = UDim2.new(page - LoadedPage, 0, 0, 30)
 	content.BackgroundTransparency = 1
 	content:SetAttribute("Page", page)
-	pageTitles[page] = "Unnamed"
+	if not pageTitles[page] then pageTitles[page] = "Unnamed" end
 
 	local scaled = (1 - (4*paddingXscale))
-	local pageTitle = Instance.new("TextLabel", content)
+	local pageTitle = Instance.new("TextBox", content)
+	pageTitle.Name = "PageTitle"
 	pageTitle.Size = UDim2.new(scaled / 2, 0, 0, 30)
 	pageTitle.Position = UDim2.new(paddingXscale, 0, 0, paddingYoffset)
 	pageTitle.Text = ("Page " .. page .. " - " .. pageTitles[page])
+	pageTitle.PlaceholderText = "Tap to edit title..."
 	pageTitle.TextColor3 = Color3.new(1,1,1)
 	pageTitle.Font = Enum.Font.GothamBold
 	pageTitle.TextScaled = true
 	pageTitle.BackgroundTransparency = 1
 	pageTitle.TextXAlignment = Enum.TextXAlignment.Left
 	pageTitle:SetAttribute("inList", true)
+	
+	pageTitle.Focused:Connect(function()
+	  pageTitle.Text = pageTitles[page]
+	end
+	
+	pageTitle.FocusLost:Connect(function(enterPressed)
+    if not (sg and main) then return end
+    
+    local newTitle = pageTitle.Text
+    
+    if newTitle ~= "" then
+      pageTitles[page] = newTitle
+      if saveData then saveData() end
+    else
+      pageTitle.Text = "Page " .. page .. " - " .. pageTitles[page]
+    end
+  end)
 
 	local rightBtn = Instance.new("TextButton", content)
 	rightBtn.Name = "right"
@@ -264,9 +288,48 @@ local function GetInstance(name, page, instType)
 	end
 end
 
+local function ResetPageTitles()
+  local p = SortPages()
+  local i = 1
+	repeat
+		local pg = getPageContentParent(p[i])
+		if pg:FindFirstChild("PageTitle") then
+		  local pageNum = pg:GetAttribute("Page")
+		  pg:FindFirstChild("PageTitle").Text = ("Page " .. pageNum .. " - " .. pageTitles[pageNum])
+		end
+		i += 1
+	until i > #p
+end
+
+local HttpService = game:GetService("HttpService")
+local fileName = "AthielDevMenu".. VersionName ..".json"
+
+saveData = function()
+  Data = pageTitles
+  local json = HttpService:JSONEncode(Data)
+  writefile(fileName, json)
+  
+  ResetPageTitles()
+  print("Data saved to " .. fileName)
+end
+
+loadData = function()
+  if isfile(fileName) then
+    local content = readfile(fileName)
+    Data = HttpService:JSONDecode(content)
+    if typeof(Data) == "table" then pageTitles = Data end
+    
+    ResetPageTitles()
+    print("Data loaded!")
+  else
+    print("No save file found, using defaults.")
+  end
+end
+
 local connection1, connection2 = nil, nil
 
 sg.Destroying:Connect(function()
+	saveData()
 	if connection1 and connection1.Connected then connection1:Disconnect() connection1 = nil end
 	if connection2 and connection1.Connected then connection2:Disconnect() connection2 = nil end
 end)
@@ -484,7 +547,7 @@ local function AddItem(inst, page, name, ItemSize, ItemType, NewLine, Color, Tra
 			AddToAllInstances(r1, name, page)
 		end
 	elseif ItemType == "Frame" then
-		startSize = UDim2.new(startSize.X.Offset, 0, 0, math.max(IconSizeY/5, 5))
+		startSize = UDim2.new(startSize.X.Scale, 0, 0, math.max(IconSizeY/5, 5))
 		inst.Size = startSize
 		inst.Position = startPos
 		if Transparency then inst.BackgroundTransparency = Transparency end
@@ -782,6 +845,8 @@ Fling(GetInstance("FlingBtn", 1, "TextButton"))
 ResetVelocity(GetInstance("ResetVelocityBtn", 1, "TextButton"))
 Delete(GetInstance("DeleteBtn", 1, "TextButton"))
 TrackFly(GetInstance("TrackFlyBtn", 2, "TextButton"))
+
+loadData()
 
 task.spawn(function()
 	while task.wait(0.1) and sg do
