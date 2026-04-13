@@ -6,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "3.1"
+local VersionName = "3.2"
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
@@ -128,23 +128,23 @@ local function newContent(page)
 	pageTitle.BackgroundTransparency = 1
 	pageTitle.TextXAlignment = Enum.TextXAlignment.Left
 	pageTitle:SetAttribute("inList", true)
-	
+
 	pageTitle.Focused:Connect(function()
-	  pageTitle.Text = pageTitles[page]
+		pageTitle.Text = pageTitles[page]
 	end)
-	
+
 	pageTitle.FocusLost:Connect(function(enterPressed)
-    if not (sg and main) then return end
-    
-    local newTitle = pageTitle.Text
-    
-    if newTitle ~= "" then
-      pageTitles[page] = newTitle
-      if saveData then saveData() end
-    else
-      pageTitle.Text = "Page " .. page .. " - " .. pageTitles[page]
-    end
-  end)
+		if not (sg and main) then return end
+
+		local newTitle = pageTitle.Text
+
+		if newTitle ~= "" then
+			pageTitles[page] = newTitle
+			if saveData then saveData() end
+		else
+			pageTitle.Text = "Page " .. page .. " - " .. pageTitles[page]
+		end
+	end)
 
 	local rightBtn = Instance.new("TextButton", content)
 	rightBtn.Name = "right"
@@ -255,13 +255,13 @@ local function GetInstance(name, page, instType)
 		if t and not i:IsA(t) then return false end
 		return true
 	end
-	
+
 	local function LoopPage(p, n, t)
 		local list = p
 		if typeof(p) ~= "table" then
 			list = p:GetDescendants()
 		end
-		
+
 		for i, inst in list do
 			if FitsCriteria(i, inst, n, t) then
 				return inst
@@ -289,13 +289,13 @@ local function GetInstance(name, page, instType)
 end
 
 local function ResetPageTitles()
-  local p = SortPages()
-  local i = 1
+	local p = SortPages()
+	local i = 1
 	repeat
 		local pg = getPageContentParent(p[i])
 		if pg:FindFirstChild("PageTitle") then
-		  local pageNum = pg:GetAttribute("Page")
-		  pg:FindFirstChild("PageTitle").Text = ("Page " .. pageNum .. " - " .. pageTitles[pageNum])
+			local pageNum = pg:GetAttribute("Page")
+			pg:FindFirstChild("PageTitle").Text = ("Page " .. pageNum .. " - " .. pageTitles[pageNum])
 		end
 		i = i + 1
 	until i > #p
@@ -305,25 +305,25 @@ local HttpService = game:GetService("HttpService")
 local fileName = "AthielDevMenu".. VersionName ..".json"
 
 saveData = function()
-  Data = pageTitles
-  local json = HttpService:JSONEncode(Data)
-  writefile(fileName, json)
-  
-  ResetPageTitles()
-  print("Data saved to " .. fileName)
+	Data = pageTitles
+	local json = HttpService:JSONEncode(Data)
+	writefile(fileName, json)
+
+	ResetPageTitles()
+	print("Data saved to " .. fileName)
 end
 
 loadData = function()
-  if isfile(fileName) then
-    local content = readfile(fileName)
-    Data = HttpService:JSONDecode(content)
-    if typeof(Data) == "table" then pageTitles = Data end
-    
-    ResetPageTitles()
-    print("Data loaded!")
-  else
-    print("No save file found, using defaults.")
-  end
+	if isfile(fileName) then
+		local content = readfile(fileName)
+		Data = HttpService:JSONDecode(content)
+		if typeof(Data) == "table" then pageTitles = Data end
+
+		ResetPageTitles()
+		print("Data loaded!")
+	else
+		print("No save file found, using defaults.")
+	end
 end
 
 local connection1, connection2 = nil, nil
@@ -618,6 +618,11 @@ local function LoadAllInstances()
 	AddItem(nil, 2, "VelocityPowerSlider", 1, "Slider", true, nil, nil, "Velocity Power", nil, 300, 16, "TrackFly")
 	AddItem(Instance.new("TextButton"), 2, "TrackFlyBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Track Fly OFF", nil, nil, nil, nil)
 	
+	-- THIRD PAGE
+	-- PART MODIFICATION (SELECT, LOAD, UPDATE, MODIFY)
+	AddItem(Instance.new("TextButton"), 3, "SelectionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Part Selected", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 3, "LoadPropertiesBtn", 0.5, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Load Properties", nil, nil, nil, nil)
+	
 	SwapPage(1)
 end
 
@@ -835,6 +840,414 @@ local function Delete(inst)
 	end)
 end
 
+-- PROPERTIES PANEL -----------------------------------------------------------------------
+local SelectionPart = nil
+local Properties = {}
+
+local function clearOldProperties(gui)
+	local old = gui:FindFirstChild("PropertiesPanel")
+	if old then
+		old:Destroy()
+		return true
+	else
+		return false
+	end
+end
+
+local function makeDraggable(frame)
+	local dragging = false
+	local dragStart
+	local startPos
+
+	frame.Active = true
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+		end
+	end)
+
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			UIS.InputChanged:Connect(function(move)
+				if dragging and move == input then
+					local delta = input.Position - dragStart
+					frame.Position = UDim2.new(
+						startPos.X.Scale,
+						startPos.X.Offset + delta.X,
+						startPos.Y.Scale,
+						startPos.Y.Offset + delta.Y
+					)
+				end
+			end)
+		end
+	end)
+
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+end
+
+local function createRow(parent, propName, defaultText, onCommit)
+	local row = Instance.new("Frame")
+	row.Size = UDim2.new(1, 0, 0, 34)
+	row.BackgroundTransparency = 1
+	row.Parent = parent
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0.45, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Text = propName
+	label.Parent = row
+
+	local box = Instance.new("TextBox")
+	box.Size = UDim2.new(0.55, -6, 1, -4)
+	box.Position = UDim2.new(0.45, 6, 0, 2)
+	box.Text = defaultText
+	box.ClearTextOnFocus = false
+	box.Parent = row
+
+	local originalText = defaultText
+
+	box.Focused:Connect(function()
+		originalText = box.Text
+	end)
+
+	box.FocusLost:Connect(function(enterPressed)
+		local text = box.Text
+
+		if text == "" then
+			box.Text = originalText
+			text = originalText
+		end
+
+		onCommit(text, enterPressed)
+	end)
+
+	return box
+end
+
+local function parseVector3Text(xText, yText, zText)
+	local x = tonumber(xText)
+	local y = tonumber(yText)
+	local z = tonumber(zText)
+	if not x or not y or not z then
+		return nil
+	end
+	return Vector3.new(x, y, z)
+end
+
+local function buildPropertiesPanel(screenGui, inst)
+	local existant = clearOldProperties(screenGui)
+	
+	if existant then return end
+	
+	local panel = Instance.new("Frame")
+	panel.Name = "PropertiesPanel"
+	panel.Size = UDim2.new(0, 320, 0, 420)
+	panel.Position = UDim2.new(0.5, -160, 0.5, -210)
+	panel.BackgroundColor3 = Color3.fromRGB(225, 226, 199)
+	panel.BorderSizePixel = 0
+	panel.Parent = screenGui
+	Instance.new("UICorner").Parent = panel
+
+	makeDraggable(panel)
+
+	local topBar = Instance.new("Frame")
+	topBar.Size = UDim2.new(1, 0, 0, 30)
+	topBar.BackgroundColor3 = Color3.fromRGB(255, 249, 84)
+	topBar.BorderSizePixel = 0
+	topBar.Parent = panel
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, -40, 1, 0)
+	title.BackgroundTransparency = 1
+	title.Text = "Properties"
+	title.TextColor3 = Color3.new(0, 0, 0)
+	title.Parent = topBar
+
+	local close = Instance.new("TextButton")
+	close.Size = UDim2.new(0, 30, 1, 0)
+	close.Position = UDim2.new(1, -30, 0, 0)
+	close.Text = "X"
+	close.Parent = topBar
+	close.MouseButton1Click:Connect(function()
+		panel:Destroy()
+	end)
+
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Size = UDim2.new(1, -10, 1, -40)
+	scroll.Position = UDim2.new(0, 5, 0, 35)
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 6
+	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	scroll.Parent = panel
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = scroll
+
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+	end)
+
+	Properties = {
+		BoolValues = {},
+		NumberValues = {},
+		StringValues = {},
+		InstanceValues = {},
+	}
+
+	-- Helper: store staged values
+	local function setProp(key, value)
+		Properties[key] = value
+	end
+
+	-- Example instance properties
+	setProp("CanCollide", inst.CanCollide)
+	setProp("Transparency", inst.Transparency)
+	setProp("Color", inst.Color)
+	setProp("Position", inst.Position)
+	setProp("Size", inst.Size)
+	setProp("AssemblyLinearVelocity", inst.AssemblyLinearVelocity)
+
+	-- Bool
+	createRow(scroll, "CanCollide", tostring(inst.CanCollide), function(text)
+		local v = string.lower(text)
+		if v == "true" then
+			setProp("CanCollide", true)
+		elseif v == "false" then
+			setProp("CanCollide", false)
+		else
+			setProp("CanCollide", inst.CanCollide)
+		end
+	end)
+
+	-- Number
+	createRow(scroll, "Transparency", tostring(inst.Transparency), function(text)
+		local v = tonumber(text)
+		if v then
+			setProp("Transparency", v)
+		else
+			setProp("Transparency", inst.Transparency)
+		end
+	end)
+
+	-- StringValue examples
+	-- If you want to edit attached values inside the instance:
+	for _, child in ipairs(inst:GetChildren()) do
+		if child:IsA("StringValue") then
+			setProp(child.Name, child.Value)
+			createRow(scroll, child.Name, child.Value, function(text)
+				setProp(child.Name, text)
+			end)
+		elseif child:IsA("NumberValue") then
+			setProp(child.Name, child.Value)
+			createRow(scroll, child.Name, tostring(child.Value), function(text)
+				local n = tonumber(text)
+				if n then
+					setProp(child.Name, n)
+				else
+					setProp(child.Name, child.Value)
+				end
+			end)
+		elseif child:IsA("BoolValue") then
+			setProp(child.Name, child.Value)
+			createRow(scroll, child.Name, tostring(child.Value), function(text)
+				local v = string.lower(text)
+				if v == "true" then
+					setProp(child.Name, true)
+				elseif v == "false" then
+					setProp(child.Name, false)
+				else
+					setProp(child.Name, child.Value)
+				end
+			end)
+		end
+	end
+
+	-- Position X/Y/Z
+	do
+		local p = inst.Position
+		local xBox, yBox, zBox
+
+		xBox = createRow(scroll, "Position X", tostring(p.X), function() end)
+		yBox = createRow(scroll, "Position Y", tostring(p.Y), function() end)
+		zBox = createRow(scroll, "Position Z", tostring(p.Z), function() end)
+
+		local function updatePos()
+			local newPos = parseVector3Text(xBox.Text, yBox.Text, zBox.Text)
+			if newPos then
+				setProp("Position", newPos)
+			else
+				setProp("Position", inst.Position)
+			end
+		end
+
+		xBox.FocusLost:Connect(updatePos)
+		yBox.FocusLost:Connect(updatePos)
+		zBox.FocusLost:Connect(updatePos)
+	end
+
+	-- Size X/Y/Z
+	do
+		local s = inst.Size
+		local xBox, yBox, zBox
+
+		xBox = createRow(scroll, "Size X", tostring(s.X), function() end)
+		yBox = createRow(scroll, "Size Y", tostring(s.Y), function() end)
+		zBox = createRow(scroll, "Size Z", tostring(s.Z), function() end)
+
+		local function updateSize()
+			local newSize = parseVector3Text(xBox.Text, yBox.Text, zBox.Text)
+			if newSize then
+				setProp("Size", newSize)
+			else
+				setProp("Size", inst.Size)
+			end
+		end
+
+		xBox.FocusLost:Connect(updateSize)
+		yBox.FocusLost:Connect(updateSize)
+		zBox.FocusLost:Connect(updateSize)
+	end
+	-- AssemblyLinearVelocity X/Y/Z
+	do
+		local v = inst.AssemblyLinearVelocity
+		local xBox, yBox, zBox
+
+		xBox = createRow(scroll, "Velocity X", tostring(v.X), function() end)
+		yBox = createRow(scroll, "Velocity Y", tostring(v.Y), function() end)
+		zBox = createRow(scroll, "Velocity Z", tostring(v.Z), function() end)
+
+		local function updateVelocity()
+			local newVel = parseVector3Text(xBox.Text, yBox.Text, zBox.Text)
+			if newVel then
+				setProp("AssemblyLinearVelocity", newVel)
+			else
+				setProp("AssemblyLinearVelocity", inst.AssemblyLinearVelocity)
+			end
+		end
+
+		xBox.FocusLost:Connect(updateVelocity)
+		yBox.FocusLost:Connect(updateVelocity)
+		zBox.FocusLost:Connect(updateVelocity)
+	end
+
+	-- Color as RGB
+	do
+		local c = inst.Color
+		local rBox = createRow(scroll, "Color R", tostring(math.floor(c.R * 255)), function() end)
+		local gBox = createRow(scroll, "Color G", tostring(math.floor(c.G * 255)), function() end)
+		local bBox = createRow(scroll, "Color B", tostring(math.floor(c.B * 255)), function() end)
+
+		local function updateColor()
+			local r = tonumber(rBox.Text)
+			local g = tonumber(gBox.Text)
+			local b = tonumber(bBox.Text)
+
+			if r and g and b then
+				r = math.clamp(r, 0, 255)
+				g = math.clamp(g, 0, 255)
+				b = math.clamp(b, 0, 255)
+				setProp("Color", Color3.fromRGB(r, g, b))
+			else
+				setProp("Color", inst.Color)
+			end
+		end
+
+		rBox.FocusLost:Connect(updateColor)
+		gBox.FocusLost:Connect(updateColor)
+		bBox.FocusLost:Connect(updateColor)
+	end
+
+	-- Apply button
+	local apply = Instance.new("TextButton")
+	apply.Size = UDim2.new(0.8, 0, 0, 30)
+	apply.Position = UDim2.new(0.1,0,1,0)
+	apply.Text = "Apply to Instance"
+	apply.BackgroundColor3 = Color3.fromRGB(222, 210, 46)
+	apply.Parent = panel
+	Instance.new("UICorner").Parent = apply
+
+	apply.MouseButton1Click:Connect(function()
+		if not inst or not inst.Parent then
+			return
+		end
+
+		if Properties.CanCollide ~= nil then
+			inst.CanCollide = Properties.CanCollide
+		end
+		if Properties.Transparency ~= nil then
+			inst.Transparency = Properties.Transparency
+		end
+		if Properties.Position ~= nil then
+			inst.Position = Properties.Position
+		end
+		if Properties.Size ~= nil then
+			inst.Size = Properties.Size
+		end
+		if Properties.Color ~= nil then
+			inst.Color = Properties.Color
+		end
+		if Properties.Assembly ~= nil then
+			inst.Color = Properties.Color
+		end
+		if Properties.AssemblyLinearVelocity ~= nil then
+			inst.AssemblyLinearVelocity = Properties.AssemblyLinearVelocity
+		end
+
+		-- Apply child value objects too
+		for _, child in ipairs(inst:GetChildren()) do
+			if Properties[child.Name] ~= nil then
+				if child:IsA("StringValue") then
+					child.Value = tostring(Properties[child.Name])
+				elseif child:IsA("NumberValue") then
+					child.Value = tonumber(Properties[child.Name]) or child.Value
+				elseif child:IsA("BoolValue") then
+					child.Value = Properties[child.Name] == true
+				end
+			end
+		end
+	end)
+end
+
+-- Selection and UI setup
+local function Selection(inst)
+	local sp = false
+	local Selection = nil
+	inst.MouseButton1Click:Connect(function()
+		if Selection == nil then
+			sp = true
+			inst.BackgroundColor3 = Color3.new(0.05, 0.5, 0.8)
+			mouse.Button1Down:Wait()
+			Selection = mouse.Target
+			sp = false
+		else
+			Selection = nil
+		end
+		SelectionPart = Selection
+		inst.Text = Selection and ("Selected: "..Selection.Name) or "No Part Selected"
+		inst.BackgroundColor3 = Selection and Color3.new(0.5, 0.8, 0) or Color3.new(0.8, 0, 0)
+		print(SelectionPart)
+	end)
+end
+
+local function GetProperties(inst)
+	inst.MouseButton1Click:Connect(function()
+		if SelectionPart then
+			local screenGui = sg
+			buildPropertiesPanel(screenGui, SelectionPart)
+		end
+	end)
+end
+
 -- CHARACTER VALUES AND INSTANCE CODE STARTER -----------------------------------------------------------------------------------------------------------
 print(AllInstances)
 InfJump(GetInstance("InfJumpBtn", 1, "TextButton"))
@@ -845,6 +1258,8 @@ Fling(GetInstance("FlingBtn", 1, "TextButton"))
 ResetVelocity(GetInstance("ResetVelocityBtn", 1, "TextButton"))
 Delete(GetInstance("DeleteBtn", 1, "TextButton"))
 TrackFly(GetInstance("TrackFlyBtn", 2, "TextButton"))
+Selection(GetInstance("SelectionBtn", 3, "TextButton"))
+GetProperties(GetInstance("LoadPropertiesBtn", 3, "TextButton"))
 
 loadData()
 
