@@ -6,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "3.2"
+local VersionName = "3.3"
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
@@ -621,7 +621,8 @@ local function LoadAllInstances()
 	-- THIRD PAGE
 	-- PART MODIFICATION (SELECT, LOAD, UPDATE, MODIFY)
 	AddItem(Instance.new("TextButton"), 3, "SelectionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Part Selected", nil, nil, nil, nil)
-	AddItem(Instance.new("TextButton"), 3, "LoadPropertiesBtn", 0.5, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Load Properties", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 3, "LoadPropertiesBtn", 1, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Load Properties", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 3, "GetPositionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Target Position", nil, nil, nil, nil)
 	
 	SwapPage(1)
 end
@@ -1248,6 +1249,21 @@ local function GetProperties(inst)
 	end)
 end
 
+local function GetPosition(inst)
+	local toggle = false
+	inst.MouseButton1Click:Connect(function()
+		toggle = not toggle
+		inst.BackgroundColor3 = toggle and Color3.new(0, 0.8, 0) or Color3.new(0.8, 0, 0)
+		inst.Text = toggle and "Click anywhere to get position" or "No Target Position"
+		if toggle then
+			mouse.Button1Down:Wait()
+			toggle = false
+			inst.BackgroundColor3 = Color3.new(0.8, 0, 0)
+			inst.Text = mouse.hit and "(" .. mouse.hit.X .. ", " .. mouse.hit.Y .. ", " .. mouse.hit.Z .. ")" or "No Target Position"
+		end
+	end)
+end
+
 -- CHARACTER VALUES AND INSTANCE CODE STARTER -----------------------------------------------------------------------------------------------------------
 print(AllInstances)
 InfJump(GetInstance("InfJumpBtn", 1, "TextButton"))
@@ -1260,6 +1276,7 @@ Delete(GetInstance("DeleteBtn", 1, "TextButton"))
 TrackFly(GetInstance("TrackFlyBtn", 2, "TextButton"))
 Selection(GetInstance("SelectionBtn", 3, "TextButton"))
 GetProperties(GetInstance("LoadPropertiesBtn", 3, "TextButton"))
+GetPosition(GetInstance("GetPositionBtn", 3, "TextButton"))
 
 loadData()
 
