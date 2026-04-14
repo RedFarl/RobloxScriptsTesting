@@ -6,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "3.3"
+local VersionName = "3.3.1"
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
@@ -617,13 +617,13 @@ local function LoadAllInstances()
 	-- TRACK FLY (SPEED, TOGGLE)
 	AddItem(nil, 2, "VelocityPowerSlider", 1, "Slider", true, nil, nil, "Velocity Power", nil, 300, 16, "TrackFly")
 	AddItem(Instance.new("TextButton"), 2, "TrackFlyBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Track Fly OFF", nil, nil, nil, nil)
-	
+
 	-- THIRD PAGE
 	-- PART MODIFICATION (SELECT, LOAD, UPDATE, MODIFY)
 	AddItem(Instance.new("TextButton"), 3, "SelectionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Part Selected", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "LoadPropertiesBtn", 1, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Load Properties", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "GetPositionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Target Position", nil, nil, nil, nil)
-	
+
 	SwapPage(1)
 end
 
@@ -945,9 +945,9 @@ end
 
 local function buildPropertiesPanel(screenGui, inst)
 	local existant = clearOldProperties(screenGui)
-	
+
 	if existant then return end
-	
+
 	local panel = Instance.new("Frame")
 	panel.Name = "PropertiesPanel"
 	panel.Size = UDim2.new(0, 320, 0, 420)
@@ -1070,9 +1070,31 @@ local function buildPropertiesPanel(screenGui, inst)
 					setProp(child.Name, child.Value)
 				end
 			end)
+		elseif child:IsA("Vector3Value") then
+			do
+				local p = child.Value
+				local xBox, yBox, zBox
+
+				xBox = createRow(scroll, child.Name .." X", tostring(p.X), function() end)
+				yBox = createRow(scroll, child.Name .." Y", tostring(p.Y), function() end)
+				zBox = createRow(scroll, child.Name .." Z", tostring(p.Z), function() end)
+
+				local function updatePos()
+					local newPos = parseVector3Text(xBox.Text, yBox.Text, zBox.Text)
+					if newPos then
+						setProp(child.Name, newPos)
+					else
+						setProp(child.Name, child.Value)
+					end
+				end
+
+				xBox.FocusLost:Connect(updatePos)
+				yBox.FocusLost:Connect(updatePos)
+				zBox.FocusLost:Connect(updatePos)
+			end
 		end
 	end
-
+	
 	-- Position X/Y/Z
 	do
 		local p = inst.Position
@@ -1213,6 +1235,8 @@ local function buildPropertiesPanel(screenGui, inst)
 					child.Value = tonumber(Properties[child.Name]) or child.Value
 				elseif child:IsA("BoolValue") then
 					child.Value = Properties[child.Name] == true
+				elseif child:IsA("Vector3Value") then
+					child.Value = Vector3.new(Properties[child.Name].X, Properties[child.Name].Y, Properties[child.Name].Z)
 				end
 			end
 		end
@@ -1258,12 +1282,12 @@ local function GetPosition(inst)
 
 	local highlight = Instance.new("Highlight")
 	highlight.Parent = hitInst
-	
+
 	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	highlight.FillTransparency = 1
 	highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
 	highlight.OutlineTransparency = 0
-	
+
 	local toggle = false
 	inst.MouseButton1Click:Connect(function()
 		toggle = not toggle
@@ -1273,9 +1297,9 @@ local function GetPosition(inst)
 			mouse.Button1Down:Wait()
 			toggle = false
 			inst.BackgroundColor3 = Color3.new(0.8, 0, 0)
-			inst.Text = mouse.hit and "(" .. math.floor(mouse.hit.X * 10)/10 .. ", " .. math.floor(mouse.hit.Y * 10)/10 .. ", " .. math.floor(mouse.hit.Z * 10)/10 .. ")" or "No Target Position"
-			hitInst.Position = mouse.hit or Vector3.new(0, 0, 0)
-			hitInst.Transparency = mouse.hit and 0.5 or 1
+			inst.Text = mouse.Hit.Position and "(" .. math.floor(mouse.Hit.Position.X * 10)/10 .. ", " .. math.floor(mouse.Hit.Position.Y * 10)/10 .. ", " .. math.floor(mouse.Hit.Position.Z * 10)/10 .. ")" or "No Target Position"
+			hitInst.Position = mouse.Hit.Position or Vector3.new(0, 0, 0)
+			hitInst.Transparency = mouse.Hit and 0 or 1
 		end
 	end)
 end
