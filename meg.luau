@@ -1250,6 +1250,20 @@ local function GetProperties(inst)
 end
 
 local function GetPosition(inst)
+	local hitInst = Instance.new("Part", workspace)
+	hitInst.Size = Vector3.new(0.5, 0.5, 0.5)
+	hitInst.Anchored = true
+	hitInst.Transparency = 1
+	hitInst.CanCollide = false
+
+	local highlight = Instance.new("Highlight")
+	highlight.Parent = hitInst
+	
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.FillTransparency = 1
+	highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+	highlight.OutlineTransparency = 0
+	
 	local toggle = false
 	inst.MouseButton1Click:Connect(function()
 		toggle = not toggle
@@ -1259,7 +1273,9 @@ local function GetPosition(inst)
 			mouse.Button1Down:Wait()
 			toggle = false
 			inst.BackgroundColor3 = Color3.new(0.8, 0, 0)
-			inst.Text = mouse.hit and "(" .. mouse.hit.X .. ", " .. mouse.hit.Y .. ", " .. mouse.hit.Z .. ")" or "No Target Position"
+			inst.Text = mouse.hit and "(" .. math.floor(mouse.hit.X * 10)/10 .. ", " .. math.floor(mouse.hit.Y * 10)/10 .. ", " .. math.floor(mouse.hit.Z * 10)/10 .. ")" or "No Target Position"
+			hitInst.Position = mouse.hit or Vector3.new(0, 0, 0)
+			hitInst.Transparency = mouse.hit and 0.5 or 1
 		end
 	end)
 end
