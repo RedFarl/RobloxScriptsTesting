@@ -6,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "3.3.1"
+local VersionName = "3.3.2"
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
@@ -622,8 +622,9 @@ local function LoadAllInstances()
 	-- PART MODIFICATION (SELECT, LOAD, UPDATE, MODIFY)
 	AddItem(Instance.new("TextButton"), 3, "SelectionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Part Selected", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "LoadPropertiesBtn", 1, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Load Properties", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 3, "CloneBtn", 1, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Clone Selected Part", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "GetPositionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Target Position", nil, nil, nil, nil)
-
+	
 	SwapPage(1)
 end
 
@@ -1273,6 +1274,14 @@ local function GetProperties(inst)
 	end)
 end
 
+local function ClonePart(inst)
+	inst.MouseButton1Click:Connect(function()
+		if SelectionPart then
+			SelectionPart:Clone()
+		end
+	end)
+end
+
 local function GetPosition(inst)
 	local hitInst = Instance.new("Part", workspace)
 	hitInst.Size = Vector3.new(0.5, 0.5, 0.5)
@@ -1316,6 +1325,7 @@ Delete(GetInstance("DeleteBtn", 1, "TextButton"))
 TrackFly(GetInstance("TrackFlyBtn", 2, "TextButton"))
 Selection(GetInstance("SelectionBtn", 3, "TextButton"))
 GetProperties(GetInstance("LoadPropertiesBtn", 3, "TextButton"))
+ClonePart(GetInstance("CloneBtn", 3, "TextButton"))
 GetPosition(GetInstance("GetPositionBtn", 3, "TextButton"))
 
 loadData()
