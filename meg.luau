@@ -1319,13 +1319,59 @@ local function GetPosition(inst)
 end
 
 -- EXPLORER MENU SYSTEM ---------------------------------------------------------------------------------------------------------------------------------
-local function 
-
 local ESInstance = game.Workspace
 local EDInstance = nil
 
 local ExplorerMenu = Instance.new("Frame")
 local ScrollingFrame = Instance.new("ScrollingFrame")
+local DetailsMenu = Instance.new("Frame")
+
+local function EDchange(old, new)
+  if (new and new.Name) then
+    DetailsMenu.INSTname.Text = new.Name
+    DetailsMenu.INSTclass.Text = "Class: " .. new.ClassName
+    DetailsMenu.INSTchildrencount.Text = "#Children: " .. #(new:GetChildren())
+    DetailsMenu.INSTdescendantscount.Text = "#Descendants: " .. #(new:GetDescendants())
+  end
+end
+
+local function AddChildren(sl, inst)
+  local dsn = inst:GetChildren()
+  for _, i in ipairs(sl:GetChildren()) do
+    if i:IsA("TextButton") then
+      i:Destroy()
+    end
+  end
+  for _, i in ipairs(dsn) do
+    local fr = Instance.new("TextButton")
+    fr.Size = UDim2.new(0.9, 0, 0, 50)
+    fr.BackgroundColor3 = Color3.fromRGB(161, 237, 154)
+    fr.BackgroundTransparency = 0.5
+    fr.Parent = sl
+    fr.Text = ""
+    
+    local tn = Instance.new("TextLabel")
+    tn.Parent = fr
+  	tn.Position = UDim2.new(0.05, 0, 0.02, 0)
+  	tn.Size = UDim2.new(0.9, 0, 0.45, 0)
+  	tn.Text = ESInstance.Name
+  	tn.TextColor3 = Color3.new(0,0,0)
+  	tn.BackgroundTransparency = 1
+  	
+  	local ti = Instance.new("TextLabel")
+  	ti.Parent = fr
+  	ti.Position = UDim2.new(0.05, 0, 0.53, 0)
+  	ti.Size = UDim2.new(0.9, 0, 0.45, 0)
+  	ti.Text = ESInstance.ClassName
+  	ti.TextColor3 = Color3.new(0.2,0.2,0.2)
+  	ti.BackgroundTransparency = 1
+  	
+  	fr.MouseButton1Click:Connect(function()
+  	  EDchange(EDInstance or nil, i or nil)
+  	end)
+  end
+end
+
 task.spawn(function()
 	ExplorerMenu.Name = "Explorer"
 	ExplorerMenu.Parent = sg
@@ -1333,6 +1379,29 @@ task.spawn(function()
 	ExplorerMenu.Size = UDim2.new(0, 320, 0, 420)
 	ExplorerMenu.BackgroundColor3 = Color3.new(0.5, 0.8, 0.55)
 	makeDraggable(ExplorerMenu)
+	
+	DetailsMenu.Name = "Details"
+	DetailsMenu.Parent = ExplorerMenu
+	DetailsMenu.Position = UDim2.new(1.05, 0, 0.1, 0)
+	DetailsMenu.Size = UDim2.new(0.6, 0, 0.9, 0)
+	DetailsMenu.BackgroundColor3 = Color3.new(0.5, 0.8, 0.55)
+
+	local function newTextInstDetails(Ysc, Text, Nm)
+	  local ti = Instance.new("TextLabel")
+	  ti.Name = Nm
+  	ti.Parent = DetailsMenu
+  	ti.Position = UDim2.new(0.05, 0, Ysc, 0)
+  	ti.Size = UDim2.new(0.9, 0, 0.1, 0)
+  	ti.Text = Test
+  	ti.TextColor3 = Color3.new(0.2,0.2,0.2)
+  	ti.BackgroundTransparency = 1
+  	ti.TextScaled = true
+	end
+	
+	newTextInstDetails(0.12, "Name", "INSTname")
+	newTextInstDetails(0.24, "Type", "INSTclass")
+	newTextInstDetails(0.36, "#Children", "INSTchildrencount")
+	newTextInstDetails(0.48, "#Descendants", "INSTdescendantscount")
 
 	ScrollingFrame.Parent = ExplorerMenu
 	ScrollingFrame.Position = UDim2.new(0, 0, 0.2, 0)
