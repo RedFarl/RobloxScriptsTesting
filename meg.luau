@@ -302,7 +302,8 @@ local function ResetPageTitles()
 end
 
 local HttpService = game:GetService("HttpService")
-local fileName = "AthielDevMenu".. VersionName ..".json"
+local FileVersion = 1
+local fileName = "AthielDevMenu:" .. FileVersion .. ".json"
 
 saveData = function()
 	Data = pageTitles
@@ -599,7 +600,7 @@ local function LoadAllInstances()
 	AddItem(nil, 1, "SpeedSlider", 1, "Slider", true, nil, nil, "Speed", nil, 300, 16, "SpeedVal")
 	AddItem(nil, 1, "JumpSlider", 1, "Slider", true, nil, nil, "Jump", nil, 300, 16, "JumpVal")
 	AddItem(nil, 1, "InfJumpDebounceSlider", 1, "Slider", true, nil, nil, "Inf Jump Debounce (ms)", nil, 300, 16, "InfJumpDelay")
-	AddItem(Instance.new("TextButton"), 1, "InfJumpBtn", 0.5, "TextButton", true, Color3.new(0.8, 0, 0), 0, "InfJump OFF", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 1, "InfJumpBtn", 0.5, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Inf Jump OFF", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 1, "AutoSetSpeedBtn", 0.5, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSet Speed ON", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 1, "AutoSetJumpBtn", 0.99, "TextButton", false, Color3.new(0, 0.8, 0), 0, "AutoSet Jump ON", nil, nil, nil, nil)
 	AddItem(Instance.new("Frame"), 1, "SplitOffHumanoidProperties", 1, "Frame", true, Color3.new(0.2, 0.2, 0.2), 0.7, nil, nil, nil, nil)
@@ -619,11 +620,12 @@ local function LoadAllInstances()
 	AddItem(Instance.new("TextButton"), 2, "TrackFlyBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "Track Fly OFF", nil, nil, nil, nil)
 
 	-- THIRD PAGE
-	-- PART MODIFICATION (SELECT, LOAD, UPDATE, MODIFY)
+	-- WORLD MODIFICATION (SELECT, LOAD, UPDATE, MODIFY)
 	AddItem(Instance.new("TextButton"), 3, "SelectionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Part Selected", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "LoadPropertiesBtn", 1, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Load Properties", nil, nil, nil, nil)
-	AddItem(Instance.new("TextButton"), 3, "CloneBtn", 1, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Clone Selected Part", nil, nil, nil, nil)
-	AddItem(Instance.new("TextButton"), 3, "GetPositionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Target Position", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 3, "CloneBtn", 0.5, "TextButton", true, Color3.new(0.3, 0.86, 0.4), 0, "Clone Selected Part", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 3, "GetPositionBtn", 1, "TextButton", false, Color3.new(0.8, 0, 0), 0, "No Target Position", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 3, "ExplorerBtn", 1, "TextButton", true, Color3.new(0.15, 0.55, 0.25), 0, "Open Explorer", nil, nil, nil, nil)
 	
 	SwapPage(1)
 end
@@ -817,17 +819,19 @@ local function Delete(inst)
 		rayParams.FilterType = Enum.RaycastFilterType.Exclude
 		rayParams.FilterDescendantsInstances = deleted
 
-		if not Delete then rayParams.FilterType = Enum.RaycastFilterType.Include end
-		local ray = workspace:Raycast(workspace.CurrentCamera.CFrame.Position, mouse.Hit.LookVector * 100, rayParams)
+		if not Delete then rayParams.FilterDescendantsInstances = {player.Character} end
+		local ray = workspace:Raycast(workspace.CurrentCamera.CFrame.Position, mouse.Hit.LookVector * 300, rayParams)
 		if not ray then return end
 
 		local target = ray.Instance
 		if target then
-			if table.find(deleted, target) and not Delete and target.Parent ~= player.Character then
-				target.Transparency = Orig[target].Transparency
-				target.CanCollide = Orig[target].CanCollide
-				Orig[target] = nil
-				table.remove(deleted, table.find(deleted, target))
+			if (table.find(deleted, target) or hitPart:IsA("BasePart")) and not Delete and target.Parent ~= player.Character then
+				if math.abs(hitPart.Transparency - 0.8) < 0.05 and hitPart.CanCollide == false then
+					target.Transparency = 0
+					target.CanCollide = true
+					-- Orig[target] = nil
+					-- table.remove(deleted, table.find(deleted, target))
+				end
 			elseif Delete and not table.find(deleted, target) and target.Parent ~= player.Character then
 				Orig[target] = {Transparency = target.Transparency, CanCollide = target.CanCollide}
 				if Deltype == 3 then
@@ -1277,7 +1281,8 @@ end
 local function ClonePart(inst)
 	inst.MouseButton1Click:Connect(function()
 		if SelectionPart then
-			SelectionPart:Clone()
+			local ClonedPart = SelectionPart:Clone()
+			ClonedPart.Parent = game.Workspace
 		end
 	end)
 end
@@ -1313,6 +1318,72 @@ local function GetPosition(inst)
 	end)
 end
 
+-- EXPLORER MENU SYSTEM ---------------------------------------------------------------------------------------------------------------------------------
+local function 
+
+local ESInstance = game.Workspace
+local EDInstance = nil
+
+local ExplorerMenu = Instance.new("Frame")
+local ScrollingFrame = Instance.new("ScrollingFrame")
+task.spawn(function()
+	ExplorerMenu.Name = "Explorer"
+	ExplorerMenu.Parent = sg
+	ExplorerMenu.Position = UDim2.new(0.2, 0, 0.2, 0)
+	ExplorerMenu.Size = UDim2.new(0, 320, 0, 420)
+	ExplorerMenu.BackgroundColor3 = Color3.new(0.5, 0.8, 0.55)
+	makeDraggable(ExplorerMenu)
+
+	ScrollingFrame.Parent = ExplorerMenu
+	ScrollingFrame.Position = UDim2.new(0, 0, 0.2, 0)
+	ScrollingFrame.Size = UDim2.new(0, 320, 0.8, 0)
+	ScrollingFrame.BackgroundTransparency = 1
+	ScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Vertical
+	layout.Padding = UDim.new(0, 5)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = ScrollingFrame
+
+	local Back = Instance.new("TextButton")
+	Back.Parent = ExplorerMenu
+	Back.Position = UDim2.new(0.05, 0, 0.02, 0)
+	Back.Size = UDim2.new(0, 20, 0, 20)
+	Back.Text = "Back"
+	Back.TextColor3 = Color3.new(0,0,0)
+	Back.BackgroundColor3 = Color3.new(1, 0.2, 0.2)
+	Back.MouseButton1Click:Connect(function()
+		if ESInstance then if ESInstance.Parent then ESInstance = ESInstance.Parent end end
+	end)
+	
+	local tn = Instance.new("TextLabel")
+	tn.Parent = ExplorerMenu
+	tn.Position = UDim2.new(0.05, 25, 0.02, 0)
+	tn.Size = UDim2.new(0.5, 0, 0, 20)
+	tn.Text = ESInstance.Name
+	tn.TextColor3 = Color3.new(0,0,0)
+	tn.BackgroundTransparency = 1
+	
+	local ti = Instance.new("TextLabel")
+	ti.Parent = ExplorerMenu
+	ti.Position = UDim2.new(0.05, 25, 0.02, 25)
+	ti.Size = UDim2.new(0.5, 0, 0, 20)
+	ti.Text = ESInstance.ClassName
+	ti.TextColor3 = Color3.new(0.2,0.2,0.2)
+	ti.BackgroundTransparency = 1
+end)
+local function Explorer(inst)
+	inst.MouseButton1Click:Connect(function()
+		ExplorerMenu.Enabled = not ExplorerMenu.Enabled
+		inst.Text = "Close Explorer" and ExplorerMenu.Enabled or "Open Explorer"
+		
+		
+		
+	end
+end
+
 -- CHARACTER VALUES AND INSTANCE CODE STARTER -----------------------------------------------------------------------------------------------------------
 print(AllInstances)
 InfJump(GetInstance("InfJumpBtn", 1, "TextButton"))
@@ -1327,6 +1398,7 @@ Selection(GetInstance("SelectionBtn", 3, "TextButton"))
 GetProperties(GetInstance("LoadPropertiesBtn", 3, "TextButton"))
 ClonePart(GetInstance("CloneBtn", 3, "TextButton"))
 GetPosition(GetInstance("GetPositionBtn", 3, "TextButton"))
+Explorer(GetInstance("ExplorerBtn", 3, "TextButton"))
 
 loadData()
 
