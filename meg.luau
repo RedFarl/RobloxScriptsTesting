@@ -1,5 +1,3 @@
-task.wait(2)
-
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local mouse = player:GetMouse() or player:GetMouse():Wait()
@@ -8,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "3.4"
+local VersionName = "4.0"
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
@@ -308,12 +306,25 @@ local FileVersion = 1
 local fileName = "AthielDevMenu:" .. FileVersion .. ".json"
 
 saveData = function()
+	Data = pageTitles
+	local json = HttpService:JSONEncode(Data)
+	writefile(fileName, json)
+
 	ResetPageTitles()
 	print("Data saved to " .. fileName)
 end
 
 loadData = function()
-	print("Done!")
+	if isfile(fileName) then
+		local content = readfile(fileName)
+		Data = HttpService:JSONDecode(content)
+		if typeof(Data) == "table" then pageTitles = Data end
+
+		ResetPageTitles()
+		print("Data loaded!")
+	else
+		print("No save file found, using defaults.")
+	end
 end
 
 local connection1, connection2 = nil, nil
@@ -838,23 +849,17 @@ end
 
 -- PROPERTIES PANEL -----------------------------------------------------------------------
 local SelectionPart = nil
-local Properties = {}
+local Properties = { props = {}, attrs = {}, values = {} }
 
 local function clearOldProperties(gui)
 	local old = gui:FindFirstChild("PropertiesPanel")
 	if old then
 		old:Destroy()
-		return true
-	else
-		return false
 	end
 end
 
 local function makeDraggable(frame)
-	local dragging = false
-	local dragStart
-	local startPos
-
+	local dragging, dragStart, startPos, dragInput = false, nil, nil, nil
 	frame.Active = true
 
 	frame.InputBegan:Connect(function(input)
@@ -862,86 +867,302 @@ local function makeDraggable(frame)
 			dragging = true
 			dragStart = input.Position
 			startPos = frame.Position
-		end
-	end)
-
-	frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			UIS.InputChanged:Connect(function(move)
-				if dragging and move == input then
-					local delta = input.Position - dragStart
-					frame.Position = UDim2.new(
-						startPos.X.Scale,
-						startPos.X.Offset + delta.X,
-						startPos.Y.Scale,
-						startPos.Y.Offset + delta.Y
-					)
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
 				end
 			end)
 		end
 	end)
 
-	UIS.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = false
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(input)
+		if dragging and input == dragInput and dragStart and startPos then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y
+			)
 		end
 	end)
 end
 
-local function createRow(parent, propName, defaultText, onCommit)
+local function splitNums(text)
+	local out = {}
+	for part in tostring(text):gmatch("[^,%s]+") do
+		local n = tonumber(part)
+		if not n then
+			return nil
+		end
+		out[#out + 1] = n
+	end
+	return out
+end
+
+local function formatValue(v)
+	if v == nil then
+		return "nil"
+	end
+
+	local t = typeof(v)
+	if t == "string" or t == "number" or t == "boolean" then
+		return tostring(v)
+	elseif t == "Vector2" then
+		return string.format("%g,%g", v.X, v.Y)
+	elseif t == "Vector3" then
+		return string.format("%g,%g,%g", v.X, v.Y, v.Z)
+	elseif t == "Vector2int16" then
+		return string.format("%d,%d", v.X, v.Y)
+	elseif t == "Vector3int16" then
+		return string.format("%d,%d,%d", v.X, v.Y, v.Z)
+	elseif t == "UDim" then
+		return string.format("%g,%d", v.Scale, v.Offset)
+	elseif t == "UDim2" then
+		return string.format("%g,%d,%g,%d", v.X.Scale, v.X.Offset, v.Y.Scale, v.Y.Offset)
+	elseif t == "Color3" then
+		return string.format("%d,%d,%d", math.floor(v.R * 255 + 0.5), math.floor(v.G * 255 + 0.5), math.floor(v.B * 255 + 0.5))
+	elseif t == "BrickColor" then
+		return v.Name
+	elseif t == "EnumItem" then
+		return tostring(v)
+	elseif t == "CFrame" then
+		return table.concat({ v:GetComponents() }, ",")
+	elseif t == "NumberRange" then
+		return string.format("%g,%g", v.Min, v.Max)
+	elseif t == "PhysicalProperties" then
+		return string.format("%g,%g,%g,%g,%g", v.Density, v.Friction, v.Elasticity, v.FrictionWeight, v.ElasticityWeight)
+	elseif t == "Ray" then
+		return string.format("%g,%g,%g,%g,%g,%g", v.Origin.X, v.Origin.Y, v.Origin.Z, v.Direction.X, v.Direction.Y, v.Direction.Z)
+	elseif t == "Instance" then
+		return v:GetFullName()
+	else
+		return tostring(v)
+	end
+end
+
+local function parseValue(kind, text, old)
+	text = tostring(text)
+
+	if kind == "string" then
+		return text
+	elseif kind == "number" then
+		return tonumber(text)
+	elseif kind == "boolean" then
+		local v = text:lower()
+		if v == "true" or v == "1" or v == "yes" then return true end
+		if v == "false" or v == "0" or v == "no" then return false end
+		return nil
+	elseif kind == "Vector2" then
+		local n = splitNums(text)
+		if n and #n == 2 then
+			return Vector2.new(n[1], n[2])
+		end
+	elseif kind == "Vector3" then
+		local n = splitNums(text)
+		if n and #n == 3 then
+			return Vector3.new(n[1], n[2], n[3])
+		end
+	elseif kind == "Vector2int16" then
+		local n = splitNums(text)
+		if n and #n == 2 then
+			return Vector2int16.new(math.floor(n[1]), math.floor(n[2]))
+		end
+	elseif kind == "Vector3int16" then
+		local n = splitNums(text)
+		if n and #n == 3 then
+			return Vector3int16.new(math.floor(n[1]), math.floor(n[2]), math.floor(n[3]))
+		end
+	elseif kind == "UDim" then
+		local n = splitNums(text)
+		if n and #n == 2 then
+			return UDim.new(n[1], n[2])
+		end
+	elseif kind == "UDim2" then
+		local n = splitNums(text)
+		if n and #n == 4 then
+			return UDim2.new(n[1], n[2], n[3], n[4])
+		end
+	elseif kind == "Color3" then
+		local n = splitNums(text)
+		if n and #n == 3 then
+			if n[1] > 1 or n[2] > 1 or n[3] > 1 then
+				return Color3.fromRGB(
+					math.clamp(math.floor(n[1] + 0.5), 0, 255),
+					math.clamp(math.floor(n[2] + 0.5), 0, 255),
+					math.clamp(math.floor(n[3] + 0.5), 0, 255)
+				)
+			end
+			return Color3.new(math.clamp(n[1], 0, 1), math.clamp(n[2], 0, 1), math.clamp(n[3], 0, 1))
+		end
+	elseif kind == "BrickColor" then
+		local ok, bc = pcall(BrickColor.new, text)
+		if ok then
+			return bc
+		end
+	elseif kind == "EnumItem" then
+		local enumType = tostring(old):match("^Enum%.([^%.]+)%.")
+		local itemName = text:match("^Enum%.[^%.]+%.(.+)$") or text
+		if enumType and Enum[enumType] and Enum[enumType][itemName] then
+			return Enum[enumType][itemName]
+		end
+	elseif kind == "CFrame" then
+		local n = splitNums(text)
+		if n and #n == 12 then
+			return CFrame.new(table.unpack(n))
+		end
+	elseif kind == "NumberRange" then
+		local n = splitNums(text)
+		if n and (#n == 1 or #n == 2) then
+			return NumberRange.new(n[1], n[2] or n[1])
+		end
+	elseif kind == "PhysicalProperties" then
+		local n = splitNums(text)
+		if n and #n == 5 then
+			return PhysicalProperties.new(n[1], n[2], n[3], n[4], n[5])
+		end
+	elseif kind == "Ray" then
+		local n = splitNums(text)
+		if n and #n == 6 then
+			return Ray.new(Vector3.new(n[1], n[2], n[3]), Vector3.new(n[4], n[5], n[6]))
+		end
+	end
+
+	return nil
+end
+
+local function canWriteProperty(inst, prop, value)
+	local ok = pcall(function()
+		inst[prop] = value
+	end)
+	return ok
+end
+
+local function createRow(parent, propName, defaultText, editable, onCommit)
 	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, 0, 0, 34)
+	row.Size = UDim2.new(1, 0, 0, 24)
 	row.BackgroundTransparency = 1
 	row.Parent = parent
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.45, 0, 1, 0)
+	label.Size = UDim2.new(0.44, 0, 1, 0)
 	label.BackgroundTransparency = 1
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Text = propName
+	label.TextSize = 14
+	label.TextScaled = true
 	label.Parent = row
 
 	local box = Instance.new("TextBox")
-	box.Size = UDim2.new(0.55, -6, 1, -4)
-	box.Position = UDim2.new(0.45, 6, 0, 2)
+	box.Size = UDim2.new(0.56, -4, 1, -2)
+	box.Position = UDim2.new(0.44, 4, 0, 1)
 	box.Text = defaultText
 	box.ClearTextOnFocus = false
+	box.TextSize = 14
+	box.TextXAlignment = Enum.TextXAlignment.Left
+	box.TextScaled = true
+	box.TextEditable = editable
 	box.Parent = row
 
-	local originalText = defaultText
+	if editable then
+		local original = defaultText
+		box.Focused:Connect(function()
+			original = box.Text
+		end)
 
-	box.Focused:Connect(function()
-		originalText = box.Text
-	end)
-
-	box.FocusLost:Connect(function(enterPressed)
-		local text = box.Text
-
-		if text == "" then
-			box.Text = originalText
-			text = originalText
-		end
-
-		onCommit(text, enterPressed)
-	end)
+		box.FocusLost:Connect(function()
+			local text = box.Text
+			if text == "" then
+				text = original
+				box.Text = original
+			end
+			onCommit(text)
+		end)
+	end
 
 	return box
 end
 
-local function parseVector3Text(xText, yText, zText)
-	local x = tonumber(xText)
-	local y = tonumber(yText)
-	local z = tonumber(zText)
-	if not x or not y or not z then
-		return nil
+local PROPERTY_CANDIDATES = {}
+do
+	local seen = {}
+	local function add(...)
+		for i = 1, select("#", ...) do
+			local p = select(i, ...)
+			if not seen[p] then
+				seen[p] = true
+				PROPERTY_CANDIDATES[#PROPERTY_CANDIDATES + 1] = p
+			end
+		end
 	end
-	return Vector3.new(x, y, z)
+
+	add("Name", "Parent", "Archivable", "ClassName", "UniqueId", "Value")
+
+	add(
+		"Position", "Orientation", "Rotation", "CFrame", "PivotOffset", "Size", "Color", "Transparency",
+		"Reflectance", "Material", "MaterialVariant", "Anchored", "CanCollide", "CanTouch", "CanQuery",
+		"CollisionGroup", "Massless", "RootPriority", "Shape", "Locked", "CustomPhysicalProperties",
+		"AssemblyLinearVelocity", "AssemblyAngularVelocity", "LocalTransparencyModifier", "BottomSurface",
+		"TopSurface", "LeftSurface", "RightSurface", "FrontSurface", "BackSurface", "BrickColor",
+		"AssemblyCenterOfMass", "AssemblyMass", "ExtentsCFrame", "ExtentsSize"
+	)
+
+	add(
+		"Visible", "Active", "ZIndex", "LayoutOrder", "BackgroundColor3", "BackgroundTransparency",
+		"BorderColor3", "BorderSizePixel", "ClipsDescendants", "AnchorPoint", "AutomaticSize",
+		"Rotation", "Text", "TextColor3", "TextTransparency", "TextSize", "TextWrapped", "TextScaled",
+		"TextXAlignment", "TextYAlignment", "TextStrokeColor3", "TextStrokeTransparency", "RichText",
+		"PlaceholderText", "ClearTextOnFocus", "Font", "FontFace", "TextTruncate", "MaxVisibleGraphemes",
+		"LineHeight", "AutomaticCanvasSize", "CanvasPosition", "CanvasSize", "ScrollingDirection",
+		"CanvasGroup", "BorderMode", "Modal", "Selectable", "Draggable", "AutoButtonColor",
+		"Image", "ImageColor3", "ImageTransparency", "ImageRectOffset", "ImageRectSize", "ScaleType",
+		"SliceCenter", "SliceScale", "ResampleMode"
+	)
+
+	add(
+		"SoundId", "Volume", "PlaybackSpeed", "Playing", "Looped", "TimePosition", "RollOffMode",
+		"RollOffMaxDistance", "RollOffMinDistance", "EmitterSize"
+	)
+
+	add("Brightness", "Enabled", "Range", "Shadows", "Angle", "Face")
+
+	add(
+		"WalkSpeed", "JumpPower", "JumpHeight", "Health", "MaxHealth", "HipHeight", "AutoRotate",
+		"CameraOffset", "DisplayName", "UseJumpPower", "FloorMaterial"
+	)
+
+	add("FieldOfView", "CameraType", "Focus", "CameraSubject")
+
+	add(
+		"ActionText", "ObjectText", "HoldDuration", "KeyboardKeyCode", "MaxActivationDistance",
+		"RequiresLineOfSight", "Style", "UIOffset", "ExclusivePrompt"
+	)
+
+	add("Axis", "SecondaryAxis", "Attachment0", "Attachment1", "Part0", "Part1")
+
+	add(
+		"Enabled", "Visible", "TargetAngle", "UpperAngle", "LowerAngle", "Restitution", "CurveSize0",
+		"CurveSize1", "FaceCamera", "LightEmission", "LightInfluence", "Segments", "Texture",
+		"TextureLength", "TextureSpeed", "Width0", "Width1", "ZOffset", "Acceleration", "EmissionDirection",
+		"Lifetime", "Rate", "Rotation", "RotSpeed", "Speed", "SpreadAngle", "Transparency", "Drag",
+		"LockedToPart", "VelocityInheritance"
+	)
+
+	add(
+		"Thickness", "ApplyStrokeMode", "LineJoinMode"
+	)
 end
 
 local function buildPropertiesPanel(screenGui, inst)
-	local existant = clearOldProperties(screenGui)
+	if not inst then
+		return
+	end
 
-	if existant then return end
+	clearOldProperties(screenGui)
 
 	local panel = Instance.new("Frame")
 	panel.Name = "PropertiesPanel"
@@ -950,7 +1171,7 @@ local function buildPropertiesPanel(screenGui, inst)
 	panel.BackgroundColor3 = Color3.fromRGB(225, 226, 199)
 	panel.BorderSizePixel = 0
 	panel.Parent = screenGui
-	Instance.new("UICorner").Parent = panel
+	Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
 
 	makeDraggable(panel)
 
@@ -959,286 +1180,184 @@ local function buildPropertiesPanel(screenGui, inst)
 	topBar.BackgroundColor3 = Color3.fromRGB(255, 249, 84)
 	topBar.BorderSizePixel = 0
 	topBar.Parent = panel
+	Instance.new("UICorner", topBar).CornerRadius = UDim.new(0, 10)
 
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.new(1, -40, 1, 0)
 	title.BackgroundTransparency = 1
 	title.Text = "Properties"
 	title.TextColor3 = Color3.new(0, 0, 0)
+	title.TextSize = 16
 	title.Parent = topBar
 
 	local close = Instance.new("TextButton")
 	close.Size = UDim2.new(0, 30, 1, 0)
 	close.Position = UDim2.new(1, -30, 0, 0)
 	close.Text = "X"
+	close.TextSize = 16
 	close.Parent = topBar
 	close.MouseButton1Click:Connect(function()
 		panel:Destroy()
 	end)
 
 	local scroll = Instance.new("ScrollingFrame")
-	scroll.Size = UDim2.new(1, -10, 1, -40)
+	scroll.Size = UDim2.new(1, -10, 1, -70)
 	scroll.Position = UDim2.new(0, 5, 0, 35)
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
 	scroll.ScrollBarThickness = 6
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 	scroll.Parent = panel
 
 	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 4)
+	layout.Padding = UDim.new(0, 2)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = scroll
 
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
-	end)
+	Properties = { props = {}, attrs = {}, values = {} }
 
-	Properties = {
-		BoolValues = {},
-		NumberValues = {},
-		StringValues = {},
-		InstanceValues = {},
-	}
+	local rowCount = 0
+	local function addRow(name, value, kind, commitTarget, commitKey)
+		local parserExists = kind and kind ~= "Instance" and kind ~= "Font" and kind ~= "FontFace" and kind ~= "ColorSequence" and kind ~= "NumberSequence"
+		local canEdit = false
+		if parserExists and value ~= nil then
+			canEdit = canWriteProperty(commitTarget, commitKey, value)
+		end
 
-	-- Helper: store staged values
-	local function setProp(key, value)
-		Properties[key] = value
+		local display = formatValue(value)
+		createRow(scroll, name, display, canEdit, function(text)
+			local parsed = parseValue(kind, text, value)
+			if parsed ~= nil then
+				if commitTarget == inst and commitKey then
+					Properties.props[commitKey] = parsed
+				end
+			end
+		end)
+		rowCount += 1
 	end
 
-	-- Example instance properties
-	setProp("CanCollide", inst.CanCollide)
-	setProp("Transparency", inst.Transparency)
-	setProp("Color", inst.Color)
-	setProp("Position", inst.Position)
-	setProp("Size", inst.Size)
-	setProp("AssemblyLinearVelocity", inst.AssemblyLinearVelocity)
+	for _, prop in ipairs(PROPERTY_CANDIDATES) do
+		local ok, value = pcall(function()
+			return inst[prop]
+		end)
 
-	-- Bool
-	createRow(scroll, "CanCollide", tostring(inst.CanCollide), function(text)
-		local v = string.lower(text)
-		if v == "true" then
-			setProp("CanCollide", true)
-		elseif v == "false" then
-			setProp("CanCollide", false)
-		else
-			setProp("CanCollide", inst.CanCollide)
-		end
-	end)
+		if ok then
+			local kind = typeof(value)
+			local parserExists = kind ~= "Instance" and kind ~= "Font" and kind ~= "FontFace" and kind ~= "ColorSequence" and kind ~= "NumberSequence"
+			local canEdit = false
+			if parserExists and value ~= nil then
+				canEdit = canWriteProperty(inst, prop, value)
+			end
 
-	-- Number
-	createRow(scroll, "Transparency", tostring(inst.Transparency), function(text)
-		local v = tonumber(text)
-		if v then
-			setProp("Transparency", v)
-		else
-			setProp("Transparency", inst.Transparency)
-		end
-	end)
-
-	-- StringValue examples
-	-- If you want to edit attached values inside the instance:
-	for _, child in ipairs(inst:GetChildren()) do
-		if child:IsA("StringValue") then
-			setProp(child.Name, child.Value)
-			createRow(scroll, child.Name, child.Value, function(text)
-				setProp(child.Name, text)
-			end)
-		elseif child:IsA("NumberValue") then
-			setProp(child.Name, child.Value)
-			createRow(scroll, child.Name, tostring(child.Value), function(text)
-				local n = tonumber(text)
-				if n then
-					setProp(child.Name, n)
-				else
-					setProp(child.Name, child.Value)
+			local box = createRow(scroll, prop, formatValue(value), canEdit, function(text)
+				local parsed = parseValue(kind, text, value)
+				if parsed ~= nil then
+					Properties.props[prop] = parsed
 				end
 			end)
-		elseif child:IsA("BoolValue") then
-			setProp(child.Name, child.Value)
-			createRow(scroll, child.Name, tostring(child.Value), function(text)
-				local v = string.lower(text)
-				if v == "true" then
-					setProp(child.Name, true)
-				elseif v == "false" then
-					setProp(child.Name, false)
-				else
-					setProp(child.Name, child.Value)
+
+			rowCount += 1
+		end
+	end
+
+	do
+		local attrs = inst:GetAttributes()
+		local names = {}
+		for k in pairs(attrs) do
+			names[#names + 1] = k
+		end
+		table.sort(names)
+
+		for _, name in ipairs(names) do
+			local value = attrs[name]
+			local kind = typeof(value)
+			local canEdit = value ~= nil and kind ~= "Instance" and kind ~= "Font" and kind ~= "FontFace" and kind ~= "ColorSequence" and kind ~= "NumberSequence"
+			if canEdit then
+				canEdit = pcall(function()
+					inst:SetAttribute(name, value)
+				end)
+			end
+
+			createRow(scroll, "@" .. name, formatValue(value), canEdit, function(text)
+				local parsed = parseValue(kind, text, value)
+				if parsed ~= nil then
+					Properties.attrs[name] = parsed
 				end
 			end)
-		elseif child:IsA("Vector3Value") then
-			do
-				local p = child.Value
-				local xBox, yBox, zBox
 
-				xBox = createRow(scroll, child.Name .." X", tostring(p.X), function() end)
-				yBox = createRow(scroll, child.Name .." Y", tostring(p.Y), function() end)
-				zBox = createRow(scroll, child.Name .." Z", tostring(p.Z), function() end)
+			rowCount += 1
+		end
+	end
 
-				local function updatePos()
-					local newPos = parseVector3Text(xBox.Text, yBox.Text, zBox.Text)
-					if newPos then
-						setProp(child.Name, newPos)
-					else
-						setProp(child.Name, child.Value)
-					end
+	do
+		local kids = {}
+		for _, child in ipairs(inst:GetChildren()) do
+			if child:IsA("ValueBase") then
+				kids[#kids + 1] = child
+			end
+		end
+		table.sort(kids, function(a, b)
+			return a.Name < b.Name
+		end)
+
+		for _, child in ipairs(kids) do
+			local value = child.Value
+			local kind = typeof(value)
+			local canEdit = value ~= nil and kind ~= "Instance" and kind ~= "Font" and kind ~= "FontFace" and kind ~= "ColorSequence" and kind ~= "NumberSequence"
+			if canEdit then
+				canEdit = pcall(function()
+					child.Value = value
+				end)
+			end
+
+			createRow(scroll, child.Name, formatValue(value), canEdit, function(text)
+				local parsed = parseValue(kind, text, value)
+				if parsed ~= nil then
+					Properties.values[child] = parsed
 				end
+			end)
 
-				xBox.FocusLost:Connect(updatePos)
-				yBox.FocusLost:Connect(updatePos)
-				zBox.FocusLost:Connect(updatePos)
-			end
+			rowCount += 1
 		end
 	end
 
-	-- Position X/Y/Z
-	do
-		local p = inst.Position
-		local xBox, yBox, zBox
-
-		xBox = createRow(scroll, "Position X", tostring(p.X), function() end)
-		yBox = createRow(scroll, "Position Y", tostring(p.Y), function() end)
-		zBox = createRow(scroll, "Position Z", tostring(p.Z), function() end)
-
-		local function updatePos()
-			local newPos = parseVector3Text(xBox.Text, yBox.Text, zBox.Text)
-			if newPos then
-				setProp("Position", newPos)
-			else
-				setProp("Position", inst.Position)
-			end
-		end
-
-		xBox.FocusLost:Connect(updatePos)
-		yBox.FocusLost:Connect(updatePos)
-		zBox.FocusLost:Connect(updatePos)
-	end
-
-	-- Size X/Y/Z
-	do
-		local s = inst.Size
-		local xBox, yBox, zBox
-
-		xBox = createRow(scroll, "Size X", tostring(s.X), function() end)
-		yBox = createRow(scroll, "Size Y", tostring(s.Y), function() end)
-		zBox = createRow(scroll, "Size Z", tostring(s.Z), function() end)
-
-		local function updateSize()
-			local newSize = parseVector3Text(xBox.Text, yBox.Text, zBox.Text)
-			if newSize then
-				setProp("Size", newSize)
-			else
-				setProp("Size", inst.Size)
-			end
-		end
-
-		xBox.FocusLost:Connect(updateSize)
-		yBox.FocusLost:Connect(updateSize)
-		zBox.FocusLost:Connect(updateSize)
-	end
-	-- AssemblyLinearVelocity X/Y/Z
-	do
-		local v = inst.AssemblyLinearVelocity
-		local xBox, yBox, zBox
-
-		xBox = createRow(scroll, "Velocity X", tostring(v.X), function() end)
-		yBox = createRow(scroll, "Velocity Y", tostring(v.Y), function() end)
-		zBox = createRow(scroll, "Velocity Z", tostring(v.Z), function() end)
-
-		local function updateVelocity()
-			local newVel = parseVector3Text(xBox.Text, yBox.Text, zBox.Text)
-			if newVel then
-				setProp("AssemblyLinearVelocity", newVel)
-			else
-				setProp("AssemblyLinearVelocity", inst.AssemblyLinearVelocity)
-			end
-		end
-
-		xBox.FocusLost:Connect(updateVelocity)
-		yBox.FocusLost:Connect(updateVelocity)
-		zBox.FocusLost:Connect(updateVelocity)
-	end
-
-	-- Color as RGB
-	do
-		local c = inst.Color
-		local rBox = createRow(scroll, "Color R", tostring(math.floor(c.R * 255)), function() end)
-		local gBox = createRow(scroll, "Color G", tostring(math.floor(c.G * 255)), function() end)
-		local bBox = createRow(scroll, "Color B", tostring(math.floor(c.B * 255)), function() end)
-
-		local function updateColor()
-			local r = tonumber(rBox.Text)
-			local g = tonumber(gBox.Text)
-			local b = tonumber(bBox.Text)
-
-			if r and g and b then
-				r = math.clamp(r, 0, 255)
-				g = math.clamp(g, 0, 255)
-				b = math.clamp(b, 0, 255)
-				setProp("Color", Color3.fromRGB(r, g, b))
-			else
-				setProp("Color", inst.Color)
-			end
-		end
-
-		rBox.FocusLost:Connect(updateColor)
-		gBox.FocusLost:Connect(updateColor)
-		bBox.FocusLost:Connect(updateColor)
-	end
-
-	-- Apply button
 	local apply = Instance.new("TextButton")
-	apply.Size = UDim2.new(0.8, 0, 0, 30)
-	apply.Position = UDim2.new(0.1,0,1,0)
-	apply.Text = "Apply to Instance"
+	apply.Size = UDim2.new(1, -10, 0, 24)
+	apply.Position = UDim2.new(0, 5, 1, -29)
+	apply.Text = "Apply"
 	apply.BackgroundColor3 = Color3.fromRGB(222, 210, 46)
+	apply.BorderSizePixel = 0
 	apply.Parent = panel
-	Instance.new("UICorner").Parent = apply
+	Instance.new("UICorner", apply).CornerRadius = UDim.new(0, 8)
 
 	apply.MouseButton1Click:Connect(function()
 		if not inst or not inst.Parent then
 			return
 		end
 
-		if Properties.CanCollide ~= nil then
-			inst.CanCollide = Properties.CanCollide
-		end
-		if Properties.Transparency ~= nil then
-			inst.Transparency = Properties.Transparency
-		end
-		if Properties.Position ~= nil then
-			inst.Position = Properties.Position
-		end
-		if Properties.Size ~= nil then
-			inst.Size = Properties.Size
-		end
-		if Properties.Color ~= nil then
-			inst.Color = Properties.Color
-		end
-		if Properties.Assembly ~= nil then
-			inst.Color = Properties.Color
-		end
-		if Properties.AssemblyLinearVelocity ~= nil then
-			inst.AssemblyLinearVelocity = Properties.AssemblyLinearVelocity
+		for prop, value in pairs(Properties.props) do
+			pcall(function()
+				inst[prop] = value
+			end)
 		end
 
-		-- Apply child value objects too
-		for _, child in ipairs(inst:GetChildren()) do
-			if Properties[child.Name] ~= nil then
-				if child:IsA("StringValue") then
-					child.Value = tostring(Properties[child.Name])
-				elseif child:IsA("NumberValue") then
-					child.Value = tonumber(Properties[child.Name]) or child.Value
-				elseif child:IsA("BoolValue") then
-					child.Value = Properties[child.Name] == true
-				elseif child:IsA("Vector3Value") then
-					child.Value = Vector3.new(Properties[child.Name].X, Properties[child.Name].Y, Properties[child.Name].Z)
-				end
+		for name, value in pairs(Properties.attrs) do
+			pcall(function()
+				inst:SetAttribute(name, value)
+			end)
+		end
+
+		for child, value in pairs(Properties.values) do
+			if child and child.Parent then
+				pcall(function()
+					child.Value = value
+				end)
 			end
 		end
 	end)
 end
 
--- Selection and UI setup
 local function Selection(inst)
 	local sp = false
 	local Selection = nil
@@ -1253,7 +1372,7 @@ local function Selection(inst)
 			Selection = nil
 		end
 		SelectionPart = Selection
-		inst.Text = Selection and ("Selected: "..Selection.Name) or "No Part Selected"
+		inst.Text = Selection and ("Selected: " .. Selection.Name) or "No Part Selected"
 		inst.BackgroundColor3 = Selection and Color3.new(0.5, 0.8, 0) or Color3.new(0.8, 0, 0)
 		print(SelectionPart)
 	end)
@@ -1262,8 +1381,7 @@ end
 local function GetProperties(inst)
 	inst.MouseButton1Click:Connect(function()
 		if SelectionPart then
-			local screenGui = sg
-			buildPropertiesPanel(screenGui, SelectionPart)
+			buildPropertiesPanel(sg, SelectionPart)
 		end
 	end)
 end
@@ -1345,10 +1463,11 @@ local function SearchSort()
 	if sb.Text == "" then return end
 
 	local key = st.Text == "Name" and "Name" or "ClassName"
-	print(key)
+	
 	for _, i in ipairs(ScrollingFrame:GetChildren()) do
 		if i:IsA("TextButton") then
 			local inst = i["instValue"]
+			if inst then inst = inst.Value else return end
 			i.Visible = string.find(string.lower(inst[key]), string.lower(sb.Text), 1, true) ~= nil
 		end
 	end
@@ -1398,7 +1517,7 @@ local function AddChildren(sl, inst)
 		fr.MouseButton1Click:Connect(function()
 			if time() - lastclick < 0.6 then
 				ESInstance = EDInstance
-				--AddChildren(ScrollingFrame, ESInstance)
+				AddChildren(ScrollingFrame, ESInstance)
 			end
 
 			lastclick = time()
@@ -1603,6 +1722,8 @@ ClonePart(GetInstance("CloneBtn", 3, "TextButton"))
 GetPosition(GetInstance("GetPositionBtn", 3, "TextButton"))
 Explorer(GetInstance("ExplorerBtn", 3, "TextButton"))
 OpenExplorerAt(GetInstance("OpenExplorerAtBtn", 3, "TextButton"))
+
+loadData()
 
 task.spawn(function()
 	while task.wait(0.1) and sg do
