@@ -1,3 +1,5 @@
+task.wait(2)
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local mouse = player:GetMouse() or player:GetMouse():Wait()
@@ -306,25 +308,12 @@ local FileVersion = 1
 local fileName = "AthielDevMenu:" .. FileVersion .. ".json"
 
 saveData = function()
-	Data = pageTitles
-	local json = HttpService:JSONEncode(Data)
-	writefile(fileName, json)
-
 	ResetPageTitles()
 	print("Data saved to " .. fileName)
 end
 
 loadData = function()
-	if isfile(fileName) then
-		local content = readfile(fileName)
-		Data = HttpService:JSONDecode(content)
-		if typeof(Data) == "table" then pageTitles = Data end
-
-		ResetPageTitles()
-		print("Data loaded!")
-	else
-		print("No save file found, using defaults.")
-	end
+	print("Done!")
 end
 
 local connection1, connection2 = nil, nil
@@ -627,7 +616,7 @@ local function LoadAllInstances()
 	AddItem(Instance.new("TextButton"), 3, "GetPositionBtn", 1, "TextButton", false, Color3.new(0.8, 0, 0), 0, "No Target Position", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "ExplorerBtn", 1, "TextButton", true, Color3.new(0.15, 0.55, 0.25), 0, "Open Explorer", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "OpenExplorerAtBtn", 1, "TextButton", true, Color3.new(0.1, 0.45, 0.18), 0, "Open Explorer At Selected Part", nil, nil, nil, nil)
-	
+
 	SwapPage(1)
 end
 
@@ -826,8 +815,8 @@ local function Delete(inst)
 
 		local target = ray.Instance
 		if target then
-			if (table.find(deleted, target) or hitPart:IsA("BasePart")) and not Delete and target.Parent ~= player.Character then
-				if math.abs(hitPart.Transparency - 0.8) < 0.05 and hitPart.CanCollide == false then
+			if (table.find(deleted, target) or target:IsA("BasePart")) and not Delete and target.Parent ~= player.Character then
+				if math.abs(target.Transparency - 0.8) < 0.05 and target.CanCollide == false then
 					target.Transparency = 0
 					target.CanCollide = true
 					-- Orig[target] = nil
@@ -1100,7 +1089,7 @@ local function buildPropertiesPanel(screenGui, inst)
 			end
 		end
 	end
-	
+
 	-- Position X/Y/Z
 	do
 		local p = inst.Position
@@ -1331,84 +1320,100 @@ Instance.new("UICorner", ExplorerMenu).CornerRadius = UDim.new(0, 10)
 Instance.new("UICorner", DetailsMenu).CornerRadius = UDim.new(0, 10)
 
 local function EDchange(old, new)
-  local info = TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-  local goal
-  if new and new.Name then
-    goal = {Position = UDim2.new(1.05, 0, 0.2, 0)}
-    
-    DetailsMenu.INSTname.Text = new.Name
-    DetailsMenu.INSTclass.Text = "Class: " .. new.ClassName
-    DetailsMenu.INSTchildrencount.Text = "#Children: " .. #(new:GetChildren())
-    DetailsMenu.INSTdescendantscount.Text = "#Descendants: " .. #(new:GetDescendants())
-  else
-    goal = {Position = UDim2.new(0.05, 0, 0.2, 0)}
-  end
-  
-  local tween = TweenService:Create(DetailsMenu, info, goal)
-  tween:Play()
+	EDInstance = new or nil
+	
+	local info = TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+	local goal
+	if new and new.Name then
+		goal = {Position = UDim2.new(1.05, 0, 0.2, 0)}
+
+		DetailsMenu.INSTname.Text = new.Name
+		DetailsMenu.INSTclass.Text = "Class: " .. new.ClassName
+		DetailsMenu.INSTchildrencount.Text = "#Children: " .. #(new:GetChildren())
+		DetailsMenu.INSTdescendantscount.Text = "#Descendants: " .. #(new:GetDescendants())
+	else
+		goal = {Position = UDim2.new(0.05, 0, 0.2, 0)}
+	end
+
+	local tween = TweenService:Create(DetailsMenu, info, goal)
+	tween:Play()
 end
 
 local function SearchSort()
-  local sb = ExplorerMenu["SearchBar"]
-  local st = ExplorerMenu["SearchType"]
-  if SearchBar.Text == "" then return end
-  for _, i in ipairs(ScrollingFrame:GetChildren()) do
-    if i:IsA("TextButton") then
-      i.Visible = string.find(string.lower(i[st.Text]), string.lower(sb.Text)) ~= nil
-    end
-  end
+	local sb = ExplorerMenu.SearchBar
+	local st = ExplorerMenu.SearchType
+	if sb.Text == "" then return end
+
+	local key = st.Text == "Name" and "Name" or "ClassName"
+	print(key)
+	for _, i in ipairs(ScrollingFrame:GetChildren()) do
+		if i:IsA("TextButton") then
+			local inst = i["instValue"]
+			i.Visible = string.find(string.lower(inst[key]), string.lower(sb.Text), 1, true) ~= nil
+		end
+	end
 end
 
 local function AddChildren(sl, inst)
-  local trail = ESInstance.Name or "Inst"
-  local TrailInst = inst
-  while TrailInst and TrailInst.Parent do
-    TrailInst = TrailInst.Parent
-    trail = TrailInst.Name .. " -> " .. trail
-  end
-  
-  ExplorerMenu.ExplrNameClass = ESInstance.Name .. " + " .. ESInstance.ClassName
-  ExplorerMenu.ExplrTrail = trail or "? -> " .. ESInstance.Name
-  local dsn = inst:GetChildren()
-  for _, i in ipairs(sl:GetChildren()) do
-    if i:IsA("TextButton") then
-      i:Destroy()
-    end
-  end
-  for o, i in ipairs(dsn) do
-    local backtrns = 1
-    local fr = Instance.new("TextButton")
-    fr.Size = UDim2.new(0.9, 0, 0, 50)
-    fr.BackgroundColor3 = Color3.fromRGB(161, 237, 154)
-    fr.BackgroundTransparency = 0.5 / backtrns
-    fr.Parent = sl
-    fr.LayoutOrder = o
-    fr.Text = i.ClassName .. "+ " .. i.Name
-    fr.TextScaled = true
-    fr.TextWrapped = true
-    Instance.new("UICorner", fr).CornerRadius = UDim.new(0, 10)
-    
-    fr.MouseEnter:Connect(function() fr.BackgroundTransparency = 0.3 / backtrns end)
-    fr.MouseLeave:Connect(function() fr.BackgroundTransparency = 0.5 / backtrns end)
-    
-  	local lastclick = time()
-  	fr.MouseButton1Click:Connect(function()
-  	  if time() - lastclick < 0.6 then
-  	    ESInstance = EDInstance
-  	    AddChildren(ScrollingFrame, ESInstance)
-  	  end
-  	  
-  	  lastclick = time()
-  	  EDchange(EDInstance or nil, i or nil)
-  	  if EDInstance == i then
-  	    while EDInstance == i and sg do
-  	      backtrns = 3
-  	      task.wait(0.2)
-  	    end
-  	  end
-  	end)
-  end
-  SearchSort()
+	if ESInstance == nil then ESInstance = workspace.Map end
+	local trail = ESInstance.Name or "Inst"
+	local TrailInst = inst
+	local t = time()
+	while TrailInst and TrailInst.Parent and time() - t < 1 do
+		TrailInst = TrailInst.Parent
+		trail = TrailInst.Name .. " -> " .. trail
+	end
+	
+	if not ExplorerMenu:FindFirstChild("ExplrNameClass") or not ExplorerMenu:FindFirstChild("ExplrTrail") then return end
+	ExplorerMenu.ExplrNameClass.Text = ESInstance.Name .. " + " .. ESInstance.ClassName
+	ExplorerMenu.ExplrTrail.Text = trail or "? -> " .. ESInstance.Name
+	for _, i in ipairs(ScrollingFrame:GetChildren()) do
+		if i:IsA("TextButton") then
+			i:Destroy()
+		end
+	end
+	for o, i in ipairs(ESInstance:GetChildren()) do
+		local backtrns = 1
+		local fr = Instance.new("TextButton")
+		fr.Size = UDim2.new(0.9, 0, 0, 50)
+		fr.BackgroundColor3 = Color3.fromRGB(161, 237, 154)
+		fr.BackgroundTransparency = 0.5 / backtrns
+		fr.Parent = ScrollingFrame
+		fr.LayoutOrder = o
+		fr.Text = i.Name .. ": " .. i.ClassName
+		fr.TextSize = 10
+		fr.TextWrapped = true
+		fr.ZIndex = -2
+		Instance.new("UICorner", fr).CornerRadius = UDim.new(0, 10)
+		
+		local Iinst = Instance.new("ObjectValue")
+		Iinst.Parent = fr
+		Iinst.Name = "instValue"
+		Iinst.Value = i
+		
+		fr.MouseEnter:Connect(function() fr.BackgroundTransparency = 0.3 / backtrns end)
+		fr.MouseLeave:Connect(function() fr.BackgroundTransparency = 0.5 / backtrns end)
+
+		local lastclick = time()
+		fr.MouseButton1Click:Connect(function()
+			if time() - lastclick < 0.6 then
+				ESInstance = EDInstance
+				--AddChildren(ScrollingFrame, ESInstance)
+			end
+
+			lastclick = time()
+			EDchange(EDInstance or nil, i or nil)
+			if EDInstance == i then
+				task.spawn(function()
+					while EDInstance == i and sg do
+						backtrns = 3
+						task.wait(0.2)
+					end
+				end)
+			end
+		end)
+	end
+	SearchSort()
 end
 
 ESInstance.ChildAdded:Connect(function() AddChildren(ScrollingFrame, ESInstance) end)
@@ -1420,27 +1425,29 @@ task.spawn(function()
 	ExplorerMenu.Position = UDim2.new(0.2, 0, 0.2, 0)
 	ExplorerMenu.Size = UDim2.new(0, 320, 0, 420)
 	ExplorerMenu.BackgroundColor3 = Color3.new(0.5, 0.8, 0.55)
-	ExplorerMenu.ZIndex = 2
+	ExplorerMenu.ZIndex = -5
+	ExplorerMenu.Visible = false
 	makeDraggable(ExplorerMenu)
-	
+
 	DetailsMenu.Name = "Details"
 	DetailsMenu.Parent = ExplorerMenu
-	DetailsMenu.Position = UDim2.new(1.05, 0, 0.1, 0)
-	DetailsMenu.Size = UDim2.new(0.6, 0, 0.9, 0)
+	DetailsMenu.Position = UDim2.new(1.05, 0, 0.2, 0)
+	DetailsMenu.Size = UDim2.new(0.6, 0, 0.72, 0)
 	DetailsMenu.BackgroundColor3 = Color3.new(0.5, 0.8, 0.55)
-	DetailsMenu.ZIndex = 1
+	DetailsMenu.ZIndex = -10
 
 	local function newInstDetailsMenu(Ysc, Text, Nm, TYPE)
-	  local ti = Instance.new(TYPE)
-	  ti.Name = Nm
-  	ti.Parent = DetailsMenu
-  	ti.Position = UDim2.new(0.05, 0, Ysc, 0)
-  	ti.Size = UDim2.new(0.9, 0, 0.1, 0)
-  	ti.Text = Test
-  	ti.TextColor3 = Color3.new(0.2,0.2,0.2)
-  	ti.BackgroundTransparency = 1
-  	ti.TextScaled = true
-  	Instance.new("UICorner", ti).CornerRadius = UDim.new(0, 10)
+		local ti = Instance.new(TYPE)
+		ti.Name = Nm
+		ti.Parent = DetailsMenu
+		ti.Position = UDim2.new(0.05, 0, Ysc, 0)
+		ti.Size = UDim2.new(0.9, 0, 0.1, 0)
+		ti.Text = Text
+		ti.TextColor3 = Color3.new(0.2,0.2,0.2)
+		ti.BackgroundTransparency = 0.6
+		ti.BackgroundColor3 = Color3.new(0.0862745, 0.690196, 0.0196078)
+		ti.TextScaled = true
+		Instance.new("UICorner", ti).CornerRadius = UDim.new(0, 10)
 	end
 	newInstDetailsMenu(0.02, "View Instance", "INSTview", "TextButton")
 	newInstDetailsMenu(0.14, "Name", "INSTname", "TextLabel")
@@ -1448,33 +1455,33 @@ task.spawn(function()
 	newInstDetailsMenu(0.38, "#Children", "INSTchildrencount", "TextLabel")
 	newInstDetailsMenu(0.50, "#Descendants", "INSTdescendantscount", "TextLabel")
 	newInstDetailsMenu(0.62, "Select Instance (Selected Part)", "INSTselect", "TextButton")
-	
+
 	DetailsMenu.INSTselect.MouseButton1Click:Connect(function()
-	  SelectionPart = EDInstance
+		SelectionPart = EDInstance
 	end)
 	DetailsMenu.INSTview.MouseButton1Click:Connect(function()
-	  ESInstance = EDInstance
-	  AddChildren(ScrollingFrame, ESInstance)
+		ESInstance = EDInstance
+		AddChildren(ScrollingFrame, ESInstance)
 	end)
 
 	ScrollingFrame.Parent = ExplorerMenu
-	ScrollingFrame.Position = UDim2.new(0, 0, 0.35, 0)
-	ScrollingFrame.Size = UDim2.new(0, 320, 0.65, 0)
+	ScrollingFrame.Position = UDim2.new(0.05, 0, 0.35, 0)
+	ScrollingFrame.Size = UDim2.new(0.9, 0, 0.65, 0)
 	ScrollingFrame.BackgroundTransparency = 1
 	ScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 	ScrollingFrame.ClipsDescendants = true
-	
+
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Vertical
-	layout.Padding = UDim.new(0, 5)
+	layout.Padding = UDim.new(0, 10)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = ScrollingFrame
 
 	local Back = Instance.new("TextButton")
 	Back.Parent = ExplorerMenu
-	Back.Position = UDim2.new(0.05, 0, 0.02, 0)
-	Back.Size = UDim2.new(0, 20, 0, 20)
+	Back.Position = UDim2.new(0.02, 0, 0.02, 0)
+	Back.Size = UDim2.new(0, 50, 0, 20)
 	Back.Text = "Back"
 	Back.Name = "Back"
 	Back.TextColor3 = Color3.new(0,0,0)
@@ -1485,31 +1492,50 @@ task.spawn(function()
 	end)
 	Instance.new("UICorner", Back).CornerRadius = UDim.new(0, 10)
 	
+	local Reload = Instance.new("TextButton")
+	Reload.Parent = ExplorerMenu
+	Reload.Position = UDim2.new(0.02, 0, 0.02, 25)
+	Reload.Size = UDim2.new(0, 50, 0, 20)
+	Reload.Text = "Reload"
+	Reload.Name = "Reload"
+	Reload.TextColor3 = Color3.new(0,0,0)
+	Reload.BackgroundColor3 = Color3.new(1, 0.2, 0.2)
+	Reload.MouseButton1Click:Connect(function()
+		AddChildren(ScrollingFrame, ESInstance)
+	end)
+	Instance.new("UICorner", Reload).CornerRadius = UDim.new(0, 10)
+	
 	local tn = Instance.new("TextLabel")
 	tn.Name = "ExplrNameClass"
 	tn.Parent = ExplorerMenu
-	tn.Position = UDim2.new(0.05, 25, 0.02, 0)
-	tn.Size = UDim2.new(0.5, 0, 0.1, 0)
+	tn.Position = UDim2.new(0.15, 25, 0.02, 0)
+	tn.Size = UDim2.new(0.7, 0, 0.1, 0)
 	tn.Text = ESInstance.Name .. " + " .. ESInstance.ClassName
+	tn.TextScaled = true
+	tn.TextWrapped = false
+	tn.TextXAlignment = Enum.TextXAlignment.Left
 	tn.TextColor3 = Color3.new(0,0,0)
-	tn.BackgroundTransparency = 1
-	
+	tn.BackgroundTransparency = 0.7
+	Instance.new("UICorner", tn).CornerRadius = UDim.new(0, 10)
+
 	local ti = Instance.new("TextLabel")
 	ti.Name = "ExplrTrail"
 	ti.Parent = ExplorerMenu
-	ti.Position = UDim2.new(0.05, 25, 0.12, 0)
-	ti.Size = UDim2.new(0.5, 0, 0.1, 0)
+	ti.Position = UDim2.new(0.15, 25, 0.13, 0)
+	ti.Size = UDim2.new(0.7, 0, 0.08, 0)
 	ti.Text = ESInstance.Name
 	ti.TextScaled = true
 	ti.TextWrapped = true
+	ti.TextXAlignment = Enum.TextXAlignment.Left
 	ti.TextColor3 = Color3.new(0.2,0.2,0.2)
-	ti.BackgroundTransparency = 1
-	
+	ti.BackgroundTransparency = 0.7
+	Instance.new("UICorner", ti).CornerRadius = UDim.new(0, 10)
+
 	local tb = Instance.new("TextBox")
 	tb.Name = "SearchBar"
 	tb.Parent = ExplorerMenu
 	tb.Position = UDim2.new(0.15, 25, 0.22, 0)
-	tb.Size = UDim2.new(0.8, 0, 0.13, 0)
+	tb.Size = UDim2.new(0.7, 0, 0.10, 0)
 	tb.Text = ""
 	tb.PlaceholderText = "Search by Name"
 	tb.TextScaled = true
@@ -1519,13 +1545,13 @@ task.spawn(function()
 	tb.BackgroundTransparency = 0.9
 	Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 10)
 	tb:GetPropertyChangedSignal("Text"):Connect(function()
-	  SearchSort()
+		SearchSort()
 	end)
-	
+
 	local tbTYPE = Instance.new("TextButton")
 	tbTYPE.Parent = ExplorerMenu
 	tbTYPE.Position = UDim2.new(0.02, 0, 0.22, 0)
-	tbTYPE.Size = UDim2.new(0.1, 0, 0.08, 0)
+	tbTYPE.Size = UDim2.new(0.2, 0, 0.08, 0)
 	tbTYPE.Text = "Name"
 	tbTYPE.TextScaled = true
 	tbTYPE.Name = "SearchType"
@@ -1541,18 +1567,24 @@ end)
 
 local function Explorer(inst)
 	inst.MouseButton1Click:Connect(function()
-		ExplorerMenu.Enabled = not ExplorerMenu.Enabled
-		inst.Text = "Close Explorer" and ExplorerMenu.Enabled or "Open Explorer"
-	end
+		ExplorerMenu.Visible = not ExplorerMenu.Visible
+		inst.Text = ExplorerMenu.Visible and "Close Explorer" or "Open Explorer"
+		
+		for _, i in pairs(ExplorerMenu:GetDescendants()) do
+			if i.Name ~= "ExplorerMenu" and i.Name ~= "instValue" and i.Name ~= "DetailsMenu" and not i:IsA("UICorner") and not i:IsA("UIListLayout") then
+				i.ZIndex = -2
+			end
+		end
+	end)
 end
 
 local function OpenExplorerAt(inst)
-  inst.MouseButton1Click:Connect(function()
-    ESInstance = SelectionPart
-    EDInstance = nil
-    AddChildren(ScrollingFrame, ESInstance)
-		ExplorerMenu.Enabled = true
-	end
+	inst.MouseButton1Click:Connect(function()
+		ESInstance = SelectionPart
+		EDInstance = nil
+		AddChildren(ScrollingFrame, ESInstance)
+		ExplorerMenu.Visible = true
+	end)
 end
 
 -- CHARACTER VALUES AND INSTANCE CODE STARTER -----------------------------------------------------------------------------------------------------------
@@ -1571,8 +1603,6 @@ ClonePart(GetInstance("CloneBtn", 3, "TextButton"))
 GetPosition(GetInstance("GetPositionBtn", 3, "TextButton"))
 Explorer(GetInstance("ExplorerBtn", 3, "TextButton"))
 OpenExplorerAt(GetInstance("OpenExplorerAtBtn", 3, "TextButton"))
-
-loadData()
 
 task.spawn(function()
 	while task.wait(0.1) and sg do
