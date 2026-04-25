@@ -6,7 +6,8 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "4.1"
+local VersionName = "4.1.1"
+local RobloxStudioFriendly = false
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
@@ -34,6 +35,8 @@ local saveData
 
 -- CONTAINER SETUP -----------------------------------------------------------------------------------------------------------
 print("Starting up Athiel's DevMenu v" .. VersionName)
+
+if RobloxStudioFriendly then task.wait(1.5) end
 
 for _, child in ipairs(player.PlayerGui:GetChildren()) do
 	if string.find(child.Name, "Athiel's DevMenu") then
@@ -306,6 +309,7 @@ local FileVersion = 1
 local fileName = "AthielDevMenu:" .. FileVersion .. ".json"
 
 saveData = function()
+	if RobloxStudioFriendly then return end
 	Data = pageTitles
 	local json = HttpService:JSONEncode(Data)
 	writefile(fileName, json)
@@ -315,6 +319,7 @@ saveData = function()
 end
 
 loadData = function()
+	if RobloxStudioFriendly then return end
 	if isfile(fileName) then
 		local content = readfile(fileName)
 		Data = HttpService:JSONDecode(content)
@@ -1400,7 +1405,7 @@ end
 local function SetParent(inst)
 	inst.MouseButton1Click:Connect(function()
 		if SelectionPart and SelectionParent then
-			SelectionPart = SelectionParent
+			SelectionPart.Parent = SelectionParent
 		end
 	end)
 end
@@ -1449,7 +1454,7 @@ Instance.new("UICorner", DetailsMenu).CornerRadius = UDim.new(0, 10)
 
 local function EDchange(old, new)
 	EDInstance = new or nil
-	
+
 	local info = TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 	local goal
 	if new and new.Name then
@@ -1473,7 +1478,7 @@ local function SearchSort()
 	if sb.Text == "" then return end
 
 	local key = st.Text == "Name" and "Name" or "ClassName"
-	
+
 	for _, i in ipairs(ScrollingFrame:GetChildren()) do
 		if i:IsA("TextButton") then
 			local inst = i["instValue"]
@@ -1492,7 +1497,7 @@ local function AddChildren(sl, inst)
 		TrailInst = TrailInst.Parent
 		trail = TrailInst.Name .. " -> " .. trail
 	end
-	
+
 	if not ExplorerMenu:FindFirstChild("ExplrNameClass") or not ExplorerMenu:FindFirstChild("ExplrTrail") then return end
 	ExplorerMenu.ExplrNameClass.Text = ESInstance.Name .. " + " .. ESInstance.ClassName
 	ExplorerMenu.ExplrTrail.Text = trail or "? -> " .. ESInstance.Name
@@ -1514,12 +1519,12 @@ local function AddChildren(sl, inst)
 		fr.TextWrapped = true
 		fr.ZIndex = -2
 		Instance.new("UICorner", fr).CornerRadius = UDim.new(0, 10)
-		
+
 		local Iinst = Instance.new("ObjectValue")
 		Iinst.Parent = fr
 		Iinst.Name = "instValue"
 		Iinst.Value = i
-		
+
 		fr.MouseEnter:Connect(function() fr.BackgroundTransparency = 0.3 / backtrns end)
 		fr.MouseLeave:Connect(function() fr.BackgroundTransparency = 0.5 / backtrns end)
 
@@ -1626,7 +1631,7 @@ task.spawn(function()
 		AddChildren(ScrollingFrame, ESInstance)
 	end)
 	Instance.new("UICorner", Back).CornerRadius = UDim.new(0, 10)
-	
+
 	local Reload = Instance.new("TextButton")
 	Reload.Parent = ExplorerMenu
 	Reload.Position = UDim2.new(0.02, 0, 0.02, 25)
@@ -1639,7 +1644,7 @@ task.spawn(function()
 		AddChildren(ScrollingFrame, ESInstance)
 	end)
 	Instance.new("UICorner", Reload).CornerRadius = UDim.new(0, 10)
-	
+
 	local tn = Instance.new("TextLabel")
 	tn.Name = "ExplrNameClass"
 	tn.Parent = ExplorerMenu
@@ -1704,7 +1709,7 @@ local function Explorer(inst)
 	inst.MouseButton1Click:Connect(function()
 		ExplorerMenu.Visible = not ExplorerMenu.Visible
 		inst.Text = ExplorerMenu.Visible and "Close Explorer" or "Open Explorer"
-		
+
 		for _, i in pairs(ExplorerMenu:GetDescendants()) do
 			if i.Name ~= "ExplorerMenu" and i.Name ~= "instValue" and i.Name ~= "DetailsMenu" and not i:IsA("UICorner") and not i:IsA("UIListLayout") then
 				i.ZIndex = -2
@@ -1740,7 +1745,7 @@ Explorer(GetInstance("ExplorerBtn", 3, "TextButton"))
 OpenExplorerAt(GetInstance("OpenExplorerAtBtn", 3, "TextButton"))
 SetParent(GetInstance("SetParentBtn", 3, "TextButton"))
 
-loadData()
+if not RobloxStudioFriendly then loadData() end
 
 task.spawn(function()
 	while task.wait(0.1) and sg do
