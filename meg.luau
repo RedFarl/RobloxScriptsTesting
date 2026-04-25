@@ -6,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "4.0"
+local VersionName = "4.1"
 
 _G.SpeedVal = 16
 _G.JumpVal = 50
@@ -624,6 +624,7 @@ local function LoadAllInstances()
 	AddItem(Instance.new("TextButton"), 3, "SelectionBtn", 1, "TextButton", true, Color3.new(0.8, 0, 0), 0, "No Part Selected", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "LoadPropertiesBtn", 1, "TextButton", true, Color3.new(0.0588235, 0.501961, 0.8), 0, "Load Properties", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "CloneBtn", 0.5, "TextButton", true, Color3.new(0.3, 0.86, 0.4), 0, "Clone Selected Part", nil, nil, nil, nil)
+	AddItem(Instance.new("TextButton"), 3, "SetParentBtn", 0.5, "TextButton", false, Color3.new(0.3, 0.86, 0.4), 0, "SetInst Parent", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "GetPositionBtn", 1, "TextButton", false, Color3.new(0.8, 0, 0), 0, "No Target Position", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "ExplorerBtn", 1, "TextButton", true, Color3.new(0.15, 0.55, 0.25), 0, "Open Explorer", nil, nil, nil, nil)
 	AddItem(Instance.new("TextButton"), 3, "OpenExplorerAtBtn", 1, "TextButton", true, Color3.new(0.1, 0.45, 0.18), 0, "Open Explorer At Selected Part", nil, nil, nil, nil)
@@ -849,6 +850,7 @@ end
 
 -- PROPERTIES PANEL -----------------------------------------------------------------------
 local SelectionPart = nil
+local SelectionParent = game.Workspace or nil
 local Properties = { props = {}, attrs = {}, values = {} }
 
 local function clearOldProperties(gui)
@@ -1395,6 +1397,14 @@ local function ClonePart(inst)
 	end)
 end
 
+local function SetParent(inst)
+	inst.MouseButton1Click:Connect(function()
+		if SelectionPart and SelectionParent then
+			SelectionPart = SelectionParent
+		end
+	end)
+end
+
 local function GetPosition(inst)
 	local hitInst = Instance.new("Part", workspace)
 	hitInst.Size = Vector3.new(0.5, 0.5, 0.5)
@@ -1551,7 +1561,7 @@ task.spawn(function()
 	DetailsMenu.Name = "Details"
 	DetailsMenu.Parent = ExplorerMenu
 	DetailsMenu.Position = UDim2.new(1.05, 0, 0.2, 0)
-	DetailsMenu.Size = UDim2.new(0.6, 0, 0.72, 0)
+	DetailsMenu.Size = UDim2.new(0.6, 0, 0.84, 0)
 	DetailsMenu.BackgroundColor3 = Color3.new(0.5, 0.8, 0.55)
 	DetailsMenu.ZIndex = -10
 
@@ -1574,6 +1584,7 @@ task.spawn(function()
 	newInstDetailsMenu(0.38, "#Children", "INSTchildrencount", "TextLabel")
 	newInstDetailsMenu(0.50, "#Descendants", "INSTdescendantscount", "TextLabel")
 	newInstDetailsMenu(0.62, "Select Instance (Selected Part)", "INSTselect", "TextButton")
+	newInstDetailsMenu(0.74, "Select Instance (Selected Inst for Parent)", "INSTselectParent", "TextButton")
 
 	DetailsMenu.INSTselect.MouseButton1Click:Connect(function()
 		SelectionPart = EDInstance
@@ -1581,6 +1592,11 @@ task.spawn(function()
 	DetailsMenu.INSTview.MouseButton1Click:Connect(function()
 		ESInstance = EDInstance
 		AddChildren(ScrollingFrame, ESInstance)
+	end)
+	DetailsMenu.INSTselectParent.MouseButton1Click:Connect(function()
+		if EDInstance ~= nil then
+			SelectionParent = EDInstance
+		end
 	end)
 
 	ScrollingFrame.Parent = ExplorerMenu
@@ -1722,6 +1738,7 @@ ClonePart(GetInstance("CloneBtn", 3, "TextButton"))
 GetPosition(GetInstance("GetPositionBtn", 3, "TextButton"))
 Explorer(GetInstance("ExplorerBtn", 3, "TextButton"))
 OpenExplorerAt(GetInstance("OpenExplorerAtBtn", 3, "TextButton"))
+SetParent(GetInstance("SetParentBtn", 3, "TextButton"))
 
 loadData()
 
