@@ -6,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "4.1.1"
+local VersionName = "4.1.2"
 local RobloxStudioFriendly = false
 
 _G.SpeedVal = 16
@@ -779,7 +779,7 @@ local function ResetVelocity(inst)
 					rootPart.AssemblyAngularVelocity = Vector3.zero
 				else
 					local alv = rootPart.AssemblyLinearVelocity
-					rootPart.AssemblyLinearVelocity = Vector3.new((alv.X + 1000)*10000,(alv.Y + 1000)*10000,(alv.Z + 1000)*10000)
+					rootPart.AssemblyLinearVelocity = Vector3.new(alv.X*10,math.abs(alv.Y)*10,alv.Z*10)
 				end
 			end
 		end
