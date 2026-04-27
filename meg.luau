@@ -6,7 +6,7 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- GLOBAL VARIABLES -----------------------------------------------------------------------------------------------------------
-local VersionName = "4.1.2"
+local VersionName = "4.1.3"
 local RobloxStudioFriendly = false
 
 _G.SpeedVal = 16
@@ -771,7 +771,7 @@ local function ResetVelocity(inst)
 		end
 		if Selecting == false and input.KeyCode == Keybind then
 			HoldingKeybind = true
-			while HoldingKeybind and task.wait(0.01) do
+			while HoldingKeybind and task.wait(0.01 + ((input.KeyCode == Enum.KeyCode.Z)*0.5)) do
 				local character = player.Character or player.CharacterAdded:Wait()
 				local rootPart = character:WaitForChild("HumanoidRootPart")
 				if input.KeyCode ~= Enum.KeyCode.Z then
