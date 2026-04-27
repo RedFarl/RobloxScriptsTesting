@@ -774,8 +774,13 @@ local function ResetVelocity(inst)
 			while HoldingKeybind and task.wait(0.01) do
 				local character = player.Character or player.CharacterAdded:Wait()
 				local rootPart = character:WaitForChild("HumanoidRootPart")
-				rootPart.AssemblyLinearVelocity = Vector3.zero
-				rootPart.AssemblyAngularVelocity = Vector3.zero
+				if input.KeyCode ~= Enum.KeyCode.Z then
+					rootPart.AssemblyLinearVelocity = Vector3.zero
+					rootPart.AssemblyAngularVelocity = Vector3.zero
+				else
+					local alv = rootPart.AssemblyLinearVelocity
+					rootPart.AssemblyLinearVelocity = Vector3.new((alv.X + 1000)*10000,(alv.Y + 1000)*10000,(alv.Z + 1000)*10000)
+				end
 			end
 		end
 	end
